@@ -48,7 +48,7 @@
 
         <!-- Applications with Documents -->
         @forelse($applications as $application)
-            <div class="card mb-4 shadow-sm">
+            <div class="card mb-4 shadow-sm" id="application-{{ $application->id }}">
                 <div class="card-header bg-gradient"
                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                     <div class="row align-items-center">
@@ -64,7 +64,8 @@
                                     {{ ucfirst($application->status) }}
                                 </span>
                             </h5>
-                            <small>Application #{{ $application->id }} •
+                            <small>Trademark Application ID: #{{ $application->id }} • Application No:
+                                {{ $application->application_number ?? 'Awaiting assignment' }} •
                                 {{ $application->created_at->format('d M Y') }}</small>
                         </div>
                         <div class="col-md-6 text-end">
@@ -76,15 +77,19 @@
                 <div class="card-body">
                     <!-- Application Info -->
                     <div class="row mb-4 pb-3 border-bottom">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p class="mb-1"><strong>📝 Applicant:</strong></p>
                             <p class="text-muted">{{ $application->applicant_name }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <p class="mb-1"><strong>Trademark Application ID:</strong></p>
+                            <p class="text-muted">#{{ $application->id }}</p>
+                        </div>
+                        <div class="col-md-3">
                             <p class="mb-1"><strong>🏢 Industry/Class:</strong></p>
                             <p class="text-muted">{{ $application->industry }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p class="mb-1"><strong>📱 Status:</strong></p>
                             <p class="text-muted">
                                 @switch($application->status)
@@ -111,6 +116,16 @@
                         </div>
                     </div>
 
+                    @if ($application->current_status === \App\Support\TrademarkWorkflow::ONBOARDING_PENDING)
+                        <div class="alert alert-info mb-4">
+                            <strong>Onboarding Actions</strong>
+                            <div class="mt-2">1. Upload the signed Engagement Letter.</div>
+                            <div>2. Upload the 50% payment invoice copy.</div>
+                            <div>3. Upload the signed POA.</div>
+                            <div>4. Submit your onboarding digital signature from the application Action Center. The system will auto-sign the engagement letter and POA PDFs for you.</div>
+                        </div>
+                    @endif
+
                     <!-- Documents Section -->
                     @if ($application->documents->count() > 0)
                         @php
@@ -129,10 +144,22 @@
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                                     <div>
                                                         <h6 class="mb-0">
-                                            @if (str_contains(strtolower($doc->document_type), 'affidavit'))
+                                            @if ($doc->document_type === 'engagement_letter')
+                                                🤝 Engagement Letter
+                                            @elseif ($doc->document_type === 'tm_intake_form')
+                                                📝 TM Intake Form
+                                            @elseif (str_contains(strtolower($doc->document_type), 'affidavit'))
                                                 📋 Affidavit
                                             @elseif (str_contains(strtolower($doc->document_type), 'poa'))
                                                 ✍️ Power of Attorney
+                                            @elseif ($doc->document_type === 'invoice')
+                                                💳 Invoice
+                                            @elseif ($doc->document_type === 'search_report')
+                                                🔎 Search Report
+                                            @elseif ($doc->document_type === 'draft_pdf')
+                                                🧾 Draft PDF
+                                            @elseif ($doc->document_type === 'draft_pdf (Signed)')
+                                                ✅ Signed Draft PDF
                                             @else
                                                 📄 {{ ucfirst($doc->document_type) }}
                                             @endif
@@ -170,15 +197,6 @@
                                                         ⬇️ Download
                                                     </a>
 
-                                                    <!-- Upload Signed Button (Only for legal documents, not supporting docs) -->
-                                                    @if ($doc->status === 'approved' && !in_array($doc->document_type, ['pan_card', 'address_proof', 'certificate_of_incorporation', 'gst_certificate', 'authorized_signatory_id']))
-                                                        <button type="button" class="btn btn-sm btn-outline-warning openUploadModal"
-                                                            data-doc-id="{{ $doc->id }}"
-                                                            data-app-id="{{ $application->id }}"
-                                                            data-doc-type="{{ $doc->document_type }}">
-                                                            📤 Upload Signed
-                                                        </button>
-                                                    @endif
                                                 </div>
 
                                                 @if ($doc->verified_at)
@@ -227,39 +245,42 @@
                 </div>
             </div>
 
-            <!-- Single Reusable Upload Modal -->
-            <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-light">
-                            <h5 class="modal-title" id="uploadModalLabel">📤 Upload Signed Document</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            @if ($loop->first)
+                <!-- Single Reusable Upload Modal -->
+                <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-light">
+                                <h5 class="modal-title" id="uploadModalLabel">📤 Upload Signed Document</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form id="uploadFormReusable" action="{{ route('user.document.upload-signed') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="modal-body">
+                                    <input type="hidden" id="docId" name="document_id">
+                                    <input type="hidden" id="appId" name="application_id">
+                                    
+                                    <div class="mb-3">
+                                        <label for="signedDoc" class="form-label"><strong>Select Signed Document *</strong></label>
+                                        <input type="file" id="signedDoc" name="signed_document" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        <small class="d-block text-muted mt-1">📄 Accepted: PDF, JPG, PNG (Max 10MB)</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="notes" class="form-label">Notes (Optional)</label>
+                                        <textarea id="notes" name="signature_notes" class="form-control" rows="2" placeholder="Add any notes about your signature..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-light">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Cancel</button>
+                                    <button type="submit" class="btn btn-success">✅ Upload & Submit</button>
+                                </div>
+                            </form>
                         </div>
-                        <form id="uploadFormReusable" action="{{ route('user.document.upload-signed') }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <div class="modal-body">
-                                <input type="hidden" id="docId" name="document_id">
-                                <input type="hidden" id="appId" name="application_id">
-                                
-                                <div class="mb-3">
-                                    <label for="signedDoc" class="form-label"><strong>Select Signed Document *</strong></label>
-                                    <input type="file" id="signedDoc" name="signed_document" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
-                                    <small class="d-block text-muted mt-1">📄 Accepted: PDF, JPG, PNG (Max 10MB)</small>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="notes" class="form-label">Notes (Optional)</label>
-                                    <textarea id="notes" name="signature_notes" class="form-control" rows="2" placeholder="Add any notes about your signature..."></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Cancel</button>
-                                <button type="submit" class="btn btn-success">✅ Upload & Submit</button>
-                            </div>
-                        </form>
                     </div>
                 </div>
-            </div>
+
+            @endif
 
             @empty
                 <div class="alert alert-info" role="alert">
@@ -308,6 +329,7 @@
         <!-- JavaScript for Upload Modal -->
         <script>
             let uploadModalInstance; // Store modal instance globally
+            const uploadForm = document.getElementById('uploadFormReusable');
 
             // Handle upload modal opening with dynamic population
             document.querySelectorAll('.openUploadModal').forEach(button => {
@@ -330,75 +352,91 @@
             });
 
             // Handle form submission
-            document.getElementById('uploadFormReusable').addEventListener('submit', async function(e) {
-                e.preventDefault();
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
                 
-                const docId = document.getElementById('docId').value;
-                const appId = document.getElementById('appId').value;
-                const fileInput = document.getElementById('signedDoc');
-                const notesInput = document.getElementById('notes');
+                    const docId = document.getElementById('docId').value;
+                    const appId = document.getElementById('appId').value;
+                    const fileInput = document.getElementById('signedDoc');
+                    const notesInput = document.getElementById('notes');
                 
-                if (!fileInput.files[0]) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'No File Selected',
-                        text: 'Please select a document to upload'
-                    });
-                    return;
-                }
+                    if (!fileInput.files[0]) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'No File Selected',
+                            text: 'Please select a document to upload'
+                        });
+                        return;
+                    }
 
-                const formData = new FormData();
-                formData.append('document_id', docId);
-                formData.append('application_id', appId);
-                formData.append('signed_document', fileInput.files[0]);
-                formData.append('signature_notes', notesInput.value);
-                formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-
-                // Show loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '⏳ Uploading...';
-
-                try {
-                    const response = await fetch('{{ route('user.document.upload-signed') }}', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                    const confirmation = await Swal.fire({
+                        icon: 'question',
+                        title: 'Upload signed document?',
+                        text: 'Please confirm that the selected file is the correct signed document.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, upload',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#2A9D8F',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true,
+                        focusCancel: true,
                     });
 
-                    const data = await response.json();
+                    if (!confirmation.isConfirmed) {
+                        return;
+                    }
 
-                    if (data.success) {
-                        // Close modal first
-                        if (uploadModalInstance) {
-                            uploadModalInstance.hide();
-                        }
+                    const formData = new FormData();
+                    formData.append('document_id', docId);
+                    formData.append('application_id', appId);
+                    formData.append('signed_document', fileInput.files[0]);
+                    formData.append('signature_notes', notesInput.value);
+                    formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+                    // Show loading state
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    window.LegalBruzButtonLoading?.set(submitBtn, 'Uploading...');
+
+                    try {
+                        const response = await fetch('{{ route('user.document.upload-signed') }}', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Close modal first
+                            if (uploadModalInstance) {
+                                uploadModalInstance.hide();
+                            }
                         
-                        // Reload page immediately
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 500);
-                    } else {
+                            // Reload page immediately
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message || 'Failed to upload document'
+                            });
+                            window.LegalBruzButtonLoading?.reset(submitBtn);
+                        }
+                    } catch (error) {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: data.message || 'Failed to upload document'
+                            text: 'Failed to upload document: ' + error.message
                         });
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalText;
+                        window.LegalBruzButtonLoading?.reset(submitBtn);
                     }
-                } catch (error) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to upload document: ' + error.message
-                    });
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }
-            });
+                });
+            }
+
         </script>
     @endsection

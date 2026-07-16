@@ -1,41 +1,61 @@
-@component('mail::message')
-# Payment {{ ucfirst($status) }}
+@extends('emails.layouts.simple')
 
-Hello {{ $user->name }},
+@section('email_title', 'Payment ' . ucfirst($status))
+@section('status_icon', $status === 'approved' ? '✓' : '!')
+@section('heading')
+    Payment <strong>{{ ucfirst($status) }}</strong>
+@endsection
 
-@if ($status === 'approved')
-**Good news!** Your payment has been approved successfully.
+@section('body')
+    <p>Dear {{ $user->name }},</p>
 
-**Payment Details:**
-- Amount: ₹{{ number_format($payment->amount, 2) }}
-- Transaction ID: {{ $payment->transaction_id ?? 'N/A' }}
-- Application: {{ $payment->application->brand_name ?? 'N/A' }}
-- Date: {{ $payment->paid_at?->format('d M Y H:i A') ?? now()->format('d M Y H:i A') }}
+    @if ($status === 'approved')
+        <p>Your payment has been approved successfully. You can continue tracking your trademark application from the application status page.</p>
+    @else
+        <p>Your payment could not be approved. Please review the payment details and try again, or contact support for assistance.</p>
+    @endif
 
-You can now proceed with your trademark application.
+    <div class="summary-card">
+        <div class="summary-title">Payment Summary</div>
+        <table class="summary-table">
+            <tr>
+                <th>Application</th>
+                <td>{{ $payment->application->brand_name ?? 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Amount</th>
+                <td>₹{{ number_format($payment->amount, 2) }}</td>
+            </tr>
+            <tr>
+                <th>Transaction ID</th>
+                <td>{{ $payment->transaction_id ?? 'N/A' }}</td>
+            </tr>
+            @if ($status === 'approved')
+                <tr>
+                    <th>Date</th>
+                    <td>{{ $payment->paid_at?->format('d M Y, h:i A') ?? now()->format('d M Y, h:i A') }}</td>
+                </tr>
+            @endif
+            <tr>
+                <th>Status</th>
+                <td><span class="status-pill {{ $status === 'approved' ? '' : 'danger' }}">{{ ucfirst($status) }}</span></td>
+            </tr>
+        </table>
+    </div>
 
-@else
-We regret to inform you that your payment could not be processed.
+    <div class="admin-note">
+        <strong>Government fees are not included.</strong>
+        <div>Any applicable Government or Registry fee must be paid separately.</div>
+    </div>
 
-**Payment Details:**
-- Amount: ₹{{ number_format($payment->amount, 2) }}
-- Transaction ID: {{ $payment->transaction_id ?? 'N/A' }}
-- Application: {{ $payment->application->brand_name ?? 'N/A' }}
+    @if ($reason)
+        <div class="admin-note">
+            <strong>Reason:</strong>
+            <div>{{ $reason }}</div>
+        </div>
+    @endif
 
-@if ($reason)
-**Reason:** {{ $reason }}
-@endif
-
-Please review your payment details and try again, or contact our support team for assistance.
-
-@endif
-
-@component('mail::button', ['url' => route('dashboard')])
-View Dashboard
-@endcomponent
-
-If you have any questions, please don't hesitate to contact us.
-
-Best regards,  
-**Legal Bruz Team**
-@endcomponent
+    <div class="cta-wrap">
+        <a href="{{ route('trademark.status', $payment->application_id) }}" class="primary-button">Open Application Status</a>
+    </div>
+@endsection

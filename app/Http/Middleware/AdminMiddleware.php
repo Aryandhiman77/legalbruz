@@ -19,7 +19,11 @@ class AdminMiddleware
     {
         // Check if user is authenticated as admin
         if (!Auth::guard('admin')->check()) {
-            abort(403, 'Unauthorized access');
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            return redirect()->route('admin.login');
         }
 
         return $next($request);

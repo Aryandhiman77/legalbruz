@@ -1,2 +1,22 @@
-RewriteCond %{REQUEST_URI} !^/public/
-RewriteRule ^(.*)$ public/$1 [L,QSA]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Allow direct access to real files/folders inside /public
+    RewriteCond %{REQUEST_URI} ^/public/
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Redirect everything else to public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+
+</IfModule>
+
+<!-- <IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Send shared-hosting root requests into Laravel's public front controller.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule> -->

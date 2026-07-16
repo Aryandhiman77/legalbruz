@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Legal Bruz ') }} - IPR Registration</title>
+    <title>{{ config('app.name', 'Legal Bruz (LLP)') }} - IPR Registration</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,7 @@
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ asset('css/design-system.css') }}">
 
     <style>
         * {
@@ -96,6 +97,25 @@
         .btn-nav-logout:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(42, 157, 143, 0.3);
+        }
+
+        /* Responsive Logo Styling */
+        .navbar-logo {
+            height: 56px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-logo {
+                height: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-logo {
+                height: 40px;
+            }
         }
 
         /* ============ MAIN CONTENT ============ */
@@ -527,6 +547,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/mobile-typography.css') }}">
 </head>
 
 <body>
@@ -534,8 +555,8 @@
         <!-- ============ NAVBAR ============ -->
         <nav class="navbar navbar-expand-lg">
             <div class="container">
-                <a class="navbar-brand" href="{{ url('/') }}">
-                    <i class="bi bi-shield-check" style="margin-right: 8px;"></i>Legal Bruz
+                <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url('/') }}">
+                    <img src="{{ asset('logo.png') }}" alt="Legal Bruz (LLP) logo" class="navbar-logo">
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -550,7 +571,10 @@
                                 <a class="nav-link" href="#">Help</a>
                             </li>
                             <li class="nav-item ms-2">
-                                <form method="POST" action="{{ route('logout') }}" style="display: inline;">
+                                <form method="POST" action="{{ route('logout') }}" style="display: inline;"
+                                    data-swal-confirm data-swal-title="Log out?"
+                                    data-swal-text="You will be signed out of your account." data-swal-icon="question"
+                                    data-swal-confirm-text="Yes, log out">
                                     @csrf
                                     <button type="submit" class="btn btn-nav-logout">Logout</button>
                                 </form>
@@ -576,7 +600,7 @@
         <!-- ============ FOOTER ============ -->
         <footer>
             <div class="container">
-                <p>&copy; 2026 Legal Bruz . All rights reserved. | <a href="#"
+                <p>&copy; 2026 Legal Bruz (LLP). All rights reserved. | <a href="#"
                         style="color: var(--emerald); text-decoration: none;">Privacy Policy</a> | <a href="#"
                         style="color: var(--emerald); text-decoration: none;">Terms</a></p>
             </div>
@@ -618,6 +642,8 @@
             }
         }
     </style>
+    @include('partials.button-loading')
+    @include('partials.sweet-alert-confirmations')
 </body>
 
 </html>

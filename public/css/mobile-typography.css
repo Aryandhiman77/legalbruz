@@ -1,0 +1,139 @@
+@media (max-width: 991.98px) {
+    html {
+        font-size: 14px;
+    }
+
+    body {
+        font-size: 0.9rem !important;
+        line-height: 1.45 !important;
+    }
+
+    main {
+        padding-top: 1.25rem !important;
+        padding-bottom: 1.25rem !important;
+    }
+
+    h1,
+    .h1 {
+        font-size: 1.65rem !important;
+        line-height: 1.15 !important;
+    }
+
+    h2,
+    .h2 {
+        font-size: 1.4rem !important;
+        line-height: 1.18 !important;
+    }
+
+    h3,
+    .h3 {
+        font-size: 1.2rem !important;
+        line-height: 1.2 !important;
+    }
+
+    h4,
+    .h4 {
+        font-size: 1.05rem !important;
+        line-height: 1.24 !important;
+    }
+
+    h5,
+    .h5 {
+        font-size: 0.95rem !important;
+        line-height: 1.28 !important;
+    }
+
+    h6,
+    .h6 {
+        font-size: 0.88rem !important;
+        line-height: 1.32 !important;
+    }
+
+    p,
+    li,
+    td,
+    th,
+    label,
+    .form-label,
+    .form-control,
+    .form-select,
+    .btn,
+    .dropdown-item,
+    .nav-link,
+    .alert,
+    .badge,
+    small {
+        font-size: 0.86rem !important;
+        line-height: 1.4 !important;
+    }
+
+    .btn {
+        padding: 0.55rem 0.85rem !important;
+    }
+
+    .btn-lg {
+        padding: 0.65rem 1rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.65rem !important;
+        font-size: 0.78rem !important;
+    }
+
+    .card-body {
+        padding: 1rem !important;
+    }
+
+    .container,
+    .container-fluid {
+        padding-left: 0.85rem !important;
+        padding-right: 0.85rem !important;
+    }
+
+    .table {
+        font-size: 0.82rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    html {
+        font-size: 13px;
+    }
+
+    body {
+        font-size: 0.86rem !important;
+    }
+
+    h1,
+    .h1 {
+        font-size: 1.45rem !important;
+    }
+
+    h2,
+    .h2 {
+        font-size: 1.24rem !important;
+    }
+
+    h3,
+    .h3 {
+        font-size: 1.08rem !important;
+    }
+
+    p,
+    li,
+    td,
+    th,
+    label,
+    .form-label,
+    .form-control,
+    .form-select,
+    .btn,
+    .dropdown-item,
+    .nav-link,
+    .alert,
+    .badge,
+    small {
+        font-size: 0.82rem !important;
+    }
+}

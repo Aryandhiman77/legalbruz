@@ -4,24 +4,55 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\Document;
+use App\Services\DocumentGenerator;
+use App\Services\TrademarkWorkflowService;
+use App\Support\TrademarkWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use PDF;
 
 class UserDocumentController extends Controller
 {
+    private function canAccessDocument(Document $document): bool
+    {
+        if (Auth::guard('admin')->check()) {
+            return true;
+        }
+
+        return Auth::check() && $document->user_id === Auth::id();
+    }
+
     /**
      * Show user's documents dashboard
      */
     public function index()
     {
         $user = Auth::user();
-        $applications = $user->applications()->with('documents', 'payments')->get();
+        $relations = ['documents', 'payments'];
+
+        if (Schema::hasTable('application_tasks')) {
+            $relations[] = 'tasks';
+        }
+
+        if (Schema::hasTable('draft_versions')) {
+            $relations[] = 'draftVersions';
+        }
+
+        $applications = $user->applications()->with($relations)->get();
+
+        if (!Schema::hasTable('application_tasks')) {
+            $applications->each(fn (Application $application) => $application->setRelation('tasks', collect()));
+        }
+
+        if (!Schema::hasTable('draft_versions')) {
+            $applications->each(fn (Application $application) => $application->setRelation('draftVersions', collect()));
+        }
 
         $stats = [
             'userApplicationCount' => $applications->count(),
-            'approvedCount' => $applications->where('status', 'approved')->count(),
+            'approvedCount' => $applications->where('current_status', TrademarkWorkflow::AWAITING_APPROVAL)->count(),
             'totalDocuments' => $applications->sum(fn($app) => $app->documents->count()),
             'verifiedCount' => Document::whereIn('application_id', $applications->pluck('id'))->where('verified_at', '!=', null)->count(),
         ];
@@ -37,8 +68,7 @@ class UserDocumentController extends Controller
      */
     public function view(Document $document)
     {
-        // Verify ownership
-        if ($document->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+        if (!$this->canAccessDocument($document)) {
             abort(403);
         }
 
@@ -56,8 +86,7 @@ class UserDocumentController extends Controller
      */
     public function download(Document $document)
     {
-        // Verify ownership
-        if ($document->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+        if (!$this->canAccessDocument($document)) {
             abort(403);
         }
 
@@ -91,7 +120,7 @@ class UserDocumentController extends Controller
     /**
      * Upload signed document
      */
-    public function uploadSigned(Request $request)
+    public function uploadSigned(Request $request, TrademarkWorkflowService $workflow)
     {
         $validated = $request->validate([
             'document_id' => 'required|exists:documents,id',
@@ -151,6 +180,16 @@ class UserDocumentController extends Controller
                 'status' => 'archived'
             ]);
 
+            if ($document->document_type === 'engagement_letter') {
+                $workflow->completeTask($application, 'engagement_letter_signed');
+            }
+
+            if ($document->document_type === 'poa') {
+                $workflow->completeTask($application, 'poa_signed');
+            }
+
+            $workflow->refreshOnboardingStatus($application);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Signed document uploaded successfully. Admin will review it shortly.',
@@ -162,6 +201,120 @@ class UserDocumentController extends Controller
                 'message' => 'Failed to upload document: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Store a user's signature for an approved application.
+     */
+    public function submitSignature(Request $request, $applicationId)
+    {
+        $application = Application::findOrFail($applicationId);
+
+        if ($application->user_id !== Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        if ($application->current_status !== TrademarkWorkflow::ONBOARDING_PENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Signature can only be submitted during onboarding.'
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'signature_mode' => 'required|in:digital,image',
+            'digital_signature' => 'nullable|string|max:255|required_if:signature_mode,digital',
+            'signature_image' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120|required_if:signature_mode,image',
+            'signature_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $existingSignatureDocs = Document::where('application_id', $application->id)
+                ->where('document_type', 'signature')
+                ->get();
+
+            foreach ($existingSignatureDocs as $oldDoc) {
+                if ($oldDoc->file_path && Storage::disk('public')->exists($oldDoc->file_path)) {
+                    Storage::disk('public')->delete($oldDoc->file_path);
+                }
+
+                $oldDoc->delete();
+            }
+
+            if ($validated['signature_mode'] === 'digital') {
+                $signatureText = trim($validated['digital_signature']);
+                $filename = 'digital-signature-' . $application->id . '-' . now()->timestamp . '.html';
+                $path = 'documents/signatures/' . $filename;
+
+                $html = view('user.partials.signature-document', [
+                    'application' => $application,
+                    'signatureText' => $signatureText,
+                    'signatureNotes' => $validated['signature_notes'] ?? null,
+                    'submittedAt' => now(),
+                    'user' => Auth::user(),
+                ])->render();
+
+                Storage::disk('public')->put($path, $html);
+
+                $fileName = $filename;
+                $fileType = 'html';
+                $fileSize = strlen($html);
+                $verificationNotes = 'Digital signature submitted by user: ' . $signatureText;
+            } else {
+                $file = $request->file('signature_image');
+                $filename = 'signature-image-' . $application->id . '-' . now()->timestamp . '.' . $file->getClientOriginalExtension();
+                $path = 'documents/signatures/' . $filename;
+
+                Storage::disk('public')->put($path, file_get_contents($file));
+
+                $fileName = $filename;
+                $fileType = $file->getClientOriginalExtension();
+                $fileSize = $file->getSize();
+                $verificationNotes = 'Signature image uploaded by user.';
+            }
+
+            if (!empty($validated['signature_notes'])) {
+                $verificationNotes .= ' Notes: ' . $validated['signature_notes'];
+            }
+
+            $signatureDocument = Document::create([
+                'application_id' => $application->id,
+                'user_id' => Auth::id(),
+                'document_type' => 'signature',
+                'file_path' => $path,
+                'file_name' => $fileName,
+                'file_type' => $fileType,
+                'file_size' => $fileSize,
+                'status' => 'uploaded',
+                'verification_notes' => $verificationNotes,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Signature submitted successfully. Our team will review it shortly.',
+                'document' => $signatureDocument,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to submit signature: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function submitAffidavit(Request $request, $applicationId, TrademarkWorkflowService $workflow)
+    {
+        $application = Application::findOrFail($applicationId);
+
+        if ($application->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        return redirect()->route('trademark.status', $application->id)
+            ->with('info', 'The affidavit is provided for download only and does not need to be signed or submitted.');
     }
 
     /**

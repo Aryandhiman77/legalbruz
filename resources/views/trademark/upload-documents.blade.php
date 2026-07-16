@@ -6,8 +6,8 @@
             <div class="col-md-10">
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
-                        <h3>Upload Documents</h3>
-                        <small>Step 4: Document Submission</small>
+                        {{-- <h3>Upload Documents</h3>
+                        <small>Step 4: Document Submission</small> --}}
                     </div>
                     <div class="card-body p-5">
                         <div class="alert alert-warning">

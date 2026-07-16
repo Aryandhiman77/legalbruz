@@ -29,19 +29,22 @@
                             </div>
                             <select name="status" class="form-select form-select-sm" style="max-width: 150px;">
                                 <option value="">All Status</option>
-                                <option value="pending_admin" {{ request('status') == 'pending_admin' ? 'selected' : '' }}>
-                                    ⏳ Pending
+                                <option value="UNDER_REVIEW" {{ request('status') == 'UNDER_REVIEW' ? 'selected' : '' }}>
+                                    ⏳ Under Review
                                 </option>
-                                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>
-                                    ✅ Approved
+                                <option value="ONBOARDING_PENDING" {{ request('status') == 'ONBOARDING_PENDING' ? 'selected' : '' }}>
+                                    📦 Onboarding
                                 </option>
-                                <option value="filed" {{ request('status') == 'filed' ? 'selected' : '' }}>
+                                <option value="AWAITING_APPROVAL" {{ request('status') == 'AWAITING_APPROVAL' ? 'selected' : '' }}>
+                                    ✅ Awaiting Approval
+                                </option>
+                                <option value="FILED" {{ request('status') == 'FILED' ? 'selected' : '' }}>
                                     📁 Filed
                                 </option>
-                                <option value="registered" {{ request('status') == 'registered' ? 'selected' : '' }}>
-                                    🏆 Registered
+                                <option value="REGISTERED" {{ request('status') == 'REGISTERED' ? 'selected' : '' }}>
+                                    ® Registered
                                 </option>
-                                <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>
+                                <option value="REJECTED" {{ request('status') == 'REJECTED' ? 'selected' : '' }}>
                                     ❌ Rejected
                                 </option>
                             </select>
@@ -100,33 +103,15 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="text-truncate">{{ $app->trademark_name ?? 'N/A' }}</span>
+                                            <span class="text-truncate">{{ $app->brand_name ?? 'N/A' }}</span>
                                         </td>
                                         <td>
-                                            @switch($app->status)
-                                                @case('pending_admin')
-                                                    <span class="badge bg-warning text-dark">⏳ Pending</span>
-                                                @break
-
-                                                @case('approved')
-                                                    <span class="badge bg-success">✅ Approved</span>
-                                                @break
-
-                                                @case('filed')
-                                                    <span class="badge bg-info">📁 Filed</span>
-                                                @break
-
-                                                @case('registered')
-                                                    <span class="badge bg-success">🏆 Registered</span>
-                                                @break
-
-                                                @case('rejected')
-                                                    <span class="badge bg-danger">❌ Rejected</span>
-                                                @break
-
-                                                @default
-                                                    <span class="badge bg-secondary">{{ ucfirst($app->status) }}</span>
-                                            @endswitch
+                                            @php
+                                                $adminStatusLabel = ($app->registry_status === \App\Support\TrademarkWorkflow::REGISTRY_REGISTERED || filled($app->registered_at))
+                                                    ? 'Registered'
+                                                    : $app->status_label;
+                                            @endphp
+                                            <span class="badge bg-light text-dark border">{{ $adminStatusLabel }}</span>
                                         </td>
                                         <td>
                                             <small>{{ $app->created_at->format('M d, Y') }}</small>

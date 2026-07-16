@@ -77,10 +77,36 @@
         }
 
         .flow-section {
-            padding: 100px 0;
-            background: var(--white);
             position: relative;
+            overflow: hidden;
+            padding: 72px 0;
+            background:
+                radial-gradient(circle at 92% 0%, rgba(42, 157, 143, 0.12) 0 120px, transparent 121px),
+                radial-gradient(circle at 4% 100%, rgba(42, 157, 143, 0.12) 0 120px, transparent 121px),
+                var(--white);
             z-index: 2;
+        }
+
+        .flow-section::before,
+        .flow-section::after {
+            content: '';
+            position: absolute;
+            width: 120px;
+            height: 76px;
+            opacity: 0.42;
+            background-image: radial-gradient(circle, rgba(42, 157, 143, 0.45) 2px, transparent 3px);
+            background-size: 18px 18px;
+            pointer-events: none;
+        }
+
+        .flow-section::before {
+            top: 42px;
+            left: 44px;
+        }
+
+        .flow-section::after {
+            right: 76px;
+            bottom: 62px;
         }
 
         .section-title {
@@ -98,73 +124,197 @@
             color: var(--slate);
         }
 
-        /* ============ HORIZONTAL FLOW ============ */
+        .flow-header {
+            max-width: 660px;
+            margin: 0 auto 46px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .flow-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 16px;
+            margin-bottom: 16px;
+            border-radius: 999px;
+            background: rgba(42, 157, 143, 0.12);
+            color: #128b82;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .flow-kicker i {
+            font-size: 1.05rem;
+        }
+
+        .flow-header h2 {
+            font-size: clamp(2rem, 3.7vw, 3.2rem);
+            letter-spacing: 0;
+            line-height: 1.05;
+            margin-bottom: 12px;
+        }
+
+        .flow-header h2 span {
+            color: var(--emerald);
+        }
+
+        .flow-header p {
+            color: var(--slate);
+            font-size: 0.98rem;
+        }
+
         .flow-container {
             position: relative;
-            margin: 60px 0;
+            z-index: 1;
         }
 
         .flow-timeline {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            display: grid;
+            grid-template-columns: repeat(8, minmax(90px, 1fr));
+            gap: 14px;
             position: relative;
-            margin-bottom: 40px;
         }
 
         .flow-timeline::before {
             content: '';
             position: absolute;
-            top: 40px;
-            left: 0;
-            right: 0;
+            top: 31px;
+            left: 6%;
+            right: 6%;
             height: 3px;
-            background: linear-gradient(90deg, var(--emerald) 0%, var(--navy) 100%);
-            z-index: 0;
+            background: linear-gradient(90deg, transparent, var(--emerald) 8%, var(--emerald) 92%, transparent);
         }
 
         .flow-step {
-            flex: 1;
             position: relative;
-            z-index: 1;
+            display: grid;
+            justify-items: center;
             text-align: center;
-            padding: 0 15px;
+            min-width: 0;
+            padding-bottom: 16px;
+        }
+
+        .flow-step::before,
+        .flow-step::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--emerald);
+        }
+
+        .flow-step::before {
+            top: 84px;
+            width: 3px;
+            height: 16px;
+            border-radius: 999px;
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--emerald) 0,
+                var(--emerald) 4px,
+                transparent 4px,
+                transparent 10px
+            );
+        }
+
+        .flow-step::after {
+            top: auto;
+            bottom: 0;
+            width: 48px;
+            height: 3px;
+            border-radius: 999px;
         }
 
         .step-circle {
-            width: 85px;
-            height: 85px;
-            margin: 0 auto 25px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--emerald) 0%, #228974 100%);
-            color: var(--white);
+            width: 62px;
+            height: 62px;
+            position: relative;
+            z-index: 2;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            border: 6px solid rgba(42, 157, 143, 0.14);
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 28%, #21b4a7 0%, #098d82 70%);
+            color: var(--white);
+            box-shadow: 0 10px 22px rgba(42, 157, 143, 0.14);
+            font-size: 1.35rem;
             font-weight: 900;
-            box-shadow: 0 10px 30px rgba(42, 157, 143, 0.25);
-            border: 5px solid var(--white);
-            transition: all 0.3s ease;
+            line-height: 1;
         }
 
-        .flow-step:hover .step-circle {
-            transform: scale(1.15);
-            box-shadow: 0 15px 40px rgba(42, 157, 143, 0.4);
+        .flow-step:nth-child(6) .step-circle {
+            width: 72px;
+            height: 72px;
+            margin-top: -5px;
+            box-shadow: 0 12px 26px rgba(42, 157, 143, 0.2);
+        }
+
+        .step-icon {
+            width: 62px;
+            height: 62px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 40px;
+            margin-bottom: 16px;
+            border-radius: 50%;
+            background: rgba(42, 157, 143, 0.12);
+            color: #128b82;
+            font-size: 1.75rem;
         }
 
         .step-title {
-            font-weight: 800;
             color: var(--navy);
-            margin-bottom: 10px;
-            font-size: 1.1rem;
+            font-size: 0.86rem;
+            font-weight: 900;
+            min-height: 36px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            line-height: 1.25;
         }
 
         .step-description {
+            max-width: 122px;
             color: var(--slate);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            min-height: 50px;
+            font-size: 0.78rem;
+            line-height: 1.42;
+            min-height: 54px;
+            margin-top: 8px;
+        }
+
+        .flow-action {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-top: 46px;
+        }
+
+        .flow-guide-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: min(100%, 360px);
+            padding: 15px 28px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--emerald) 0%, #078c80 100%);
+            color: var(--white);
+            font-size: 1.02rem;
+            font-weight: 900;
+            text-decoration: none;
+            box-shadow: 0 18px 36px rgba(42, 157, 143, 0.22);
+            transition: all 0.3s ease;
+        }
+
+        .flow-guide-btn:hover {
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 22px 42px rgba(42, 157, 143, 0.28);
         }
 
         /* ============ DETAILED STEPS ============ */
@@ -429,25 +579,119 @@
 
         @media (max-width: 768px) {
             .flow-timeline {
-                flex-direction: column;
+                counter-reset: mobile-flow-step;
+                grid-template-columns: 1fr;
+                gap: 28px;
             }
 
             .flow-timeline::before {
-                left: 40px;
-                top: 0;
-                bottom: 0;
-                width: 3px;
-                height: 100%;
+                display: none;
+            }
+
+            .flow-section {
+                padding: 70px 0;
+            }
+
+            .flow-section::before,
+            .flow-section::after {
+                width: 82px;
+                height: 56px;
+                background-size: 15px 15px;
+            }
+
+            .flow-section::before {
+                top: 24px;
+                left: 18px;
+            }
+
+            .flow-section::after {
+                right: 18px;
+                bottom: 28px;
+            }
+
+            .flow-header {
+                margin-bottom: 44px;
+            }
+
+            .flow-kicker {
+                font-size: 0.72rem;
+                padding: 8px 14px;
+            }
+
+            .flow-step {
+                counter-increment: mobile-flow-step;
+                grid-template-columns: 68px minmax(0, 1fr);
+                column-gap: 18px;
+                justify-items: start;
+                align-items: center;
+                text-align: left;
+                padding-bottom: 24px;
+                position: relative;
+            }
+
+            .flow-step::before,
+            .flow-step::after {
+                display: none;
             }
 
             .step-circle {
-                width: 70px;
-                height: 70px;
-                font-size: 1.5rem;
+                display: none;
             }
 
-            .timeline-line {
-                left: 40px;
+            .flow-step:nth-child(6) .step-circle {
+                display: none;
+            }
+
+            .step-icon {
+                width: 68px;
+                height: 68px;
+                margin: 0;
+                grid-row: 1 / span 2;
+                font-size: 1.9rem;
+                position: relative;
+                z-index: 5;
+            }
+
+            .step-icon::after {
+                display: none;
+            }
+
+            .step-title {
+                min-height: 0;
+                font-size: 0.95rem;
+                display: flex;
+                gap: 8px;
+                justify-content: flex-start;
+                align-items: flex-end;
+                align-self: end;
+                line-height: 1.25;
+                margin-bottom: 3px;
+            }
+
+            .step-title::before {
+                content: counter(mobile-flow-step) ".";
+                color: var(--emerald);
+                font-weight: 900;
+            }
+
+            .step-description {
+                max-width: none;
+                min-height: 0;
+                font-size: 0.84rem;
+                line-height: 1.35;
+                margin-top: 0;
+                align-self: start;
+            }
+
+            .flow-action {
+                margin-top: 42px;
+            }
+
+            .flow-guide-btn {
+                min-width: 0;
+                width: 100%;
+                padding: 17px 20px;
+                font-size: 1rem;
             }
 
             .timeline-item:nth-child(odd),
@@ -466,4 +710,3 @@
                 font-size: 2rem;
             }
         }
-

@@ -1,4 +1,12 @@
 <IfModule mod_rewrite.c>
+    <IfModule mod_php.c>
+        php_value upload_max_filesize 32M
+        php_value post_max_size 40M
+        php_value max_file_uploads 20
+        php_value max_execution_time 120
+        php_value max_input_time 120
+    </IfModule>
+
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
@@ -12,6 +20,9 @@
     # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Stream storage files through Laravel so shared hosts do not block storage symlinks.
+    RewriteRule ^storage/(.*)$ index.php [L]
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d

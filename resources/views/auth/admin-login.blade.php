@@ -70,15 +70,15 @@
                             </button>
                         </form>
 
-                        <hr class="my-4">
+                        <!--<hr class="my-4">-->
 
                         <!-- Info Box -->
-                        <div class="alert alert-info alert-dismissible fade show" role="alert">
-                            <strong>ℹ️ Default Credentials:</strong><br>
-                            📧 Email: <code>admin@trademark.com</code><br>
-                            🔑 Password: <code>admin@123</code>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
+                        <!--<div class="alert alert-info alert-dismissible fade show" role="alert">-->
+                        <!--    <strong>ℹ️ Default Credentials:</strong><br>-->
+                        <!--    📧 Email: <code>admin@trademark.com</code><br>-->
+                        <!--    🔑 Password: <code>admin@123</code>-->
+                        <!--    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>-->
+                        <!--</div>-->
                     </div>
 
                     <!-- Footer -->
@@ -137,9 +137,7 @@
             const remember = document.getElementById('remember').checked;
             const submitBtn = document.getElementById('submitBtn');
 
-            // Disable button
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Logging in...';
+            window.LegalBruzButtonLoading?.set(submitBtn, 'Logging in...');
 
             try {
                 const response = await fetch('{{ route('admin.login.post') }}', {
@@ -177,8 +175,7 @@
                         text: data.message,
                         confirmButtonColor: '#2A9D8F'
                     });
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '🔓 Login to Admin Panel';
+                    window.LegalBruzButtonLoading?.reset(submitBtn);
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -188,8 +185,7 @@
                     text: 'An error occurred. Please try again.',
                     confirmButtonColor: '#2A9D8F'
                 });
-                submitBtn.disabled = false;
-                submitBtn.textContent = '🔓 Login to Admin Panel';
+                window.LegalBruzButtonLoading?.reset(submitBtn);
             }
         });
     </script>

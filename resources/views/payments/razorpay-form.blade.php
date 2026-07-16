@@ -1,6 +1,43 @@
 @extends('layouts.app-modern')
 
 @section('content')
+    <style>
+        .coupon-price-original {
+            background: linear-gradient(135deg, #2A9D8F 0%, #228974 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 1.28rem;
+            font-weight: 500;
+            margin-right: 0.45rem;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .coupon-price-original::after {
+            content: "";
+            position: absolute;
+            left: -3px;
+            right: -3px;
+            top: 52%;
+            height: 3px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2A9D8F 0%, #228974 100%);
+            transform: rotate(-5deg);
+        }
+
+        .coupon-price-new {
+            color: #5546ea;
+            font-weight: 950;
+            white-space: nowrap;
+        }
+
+        .coupon-auto-note {
+            color: #5546ea;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+    </style>
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-lg-6">
@@ -8,7 +45,9 @@
                 <div class="card border-0 shadow-lg mb-4">
                     <div class="card-body p-5" style="background: linear-gradient(135deg, #1D3557 0%, #2A9D8F 100%);">
                         <h1 class="text-white mb-2">Payment Required</h1>
-                        <p class="text-white-50 mb-0">50% Advance Payment for Trademark Application</p>
+                        <p class="text-white-50 mb-0">
+                            {{ ($paymentType ?? 'advance') === 'final' ? 'Final 50% balance payment' : '50% Advance Payment for Trademark Application' }}
+                        </p>
                     </div>
                 </div>
 
@@ -20,11 +59,19 @@
                         <div class="row mb-3">
                             <div class="col-6">
                                 <p class="text-muted small">Total Service Fee</p>
-                                <h6 style="color: #1D3557;"><strong>₹5,000</strong></h6>
+                                @if (!empty($autoApplyCoupon) && ($originalTotalAmount ?? $totalAmount) > $totalAmount)
+                                    <h6>
+                                        <span class="coupon-price-original">₹{{ number_format($originalTotalAmount, 0) }}</span>
+                                        <span class="coupon-price-new">₹{{ number_format($totalAmount, 0) }}</span>
+                                    </h6>
+                                    <div class="coupon-auto-note">{{ $autoApplyCoupon->code }}</div>
+                                @else
+                                    <h6 style="color: #1D3557;"><strong>₹{{ number_format($totalAmount, 0) }}</strong></h6>
+                                @endif
                             </div>
                             <div class="col-6">
-                                <p class="text-muted small">Advance (50%)</p>
-                                <h6 style="color: #2A9D8F;"><strong>₹2,500</strong></h6>
+                                <p class="text-muted small">{{ ($paymentType ?? 'advance') === 'final' ? 'Payable Now' : 'Advance (50%)' }}</p>
+                                <h6 style="color: #2A9D8F;"><strong>₹{{ number_format($advanceAmount, 0) }}</strong></h6>
                             </div>
                         </div>
 
@@ -32,8 +79,8 @@
 
                         <div class="row">
                             <div class="col-6">
-                                <p class="text-muted small">Remaining Payment (50%)</p>
-                                <h6 style="color: #4A4A4A;"><strong>₹2,500</strong></h6>
+                                <p class="text-muted small">{{ ($paymentType ?? 'advance') === 'final' ? 'Remaining After This Payment' : 'Remaining Payment (50%)' }}</p>
+                                <h6 style="color: #4A4A4A;"><strong>₹{{ number_format(max($totalAmount - $advanceAmount, 0), 0) }}</strong></h6>
                             </div>
                             <div class="col-6">
                                 <p class="text-muted small">After Document Upload</p>
@@ -44,6 +91,8 @@
                 </div>
 
                 <!-- Application Info Card -->
+                @include('partials.payment-coupons')
+
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-body p-4">
                         <h5 class="card-title mb-4" style="color: #1D3557;">🏷️ Application Details</h5>
@@ -54,15 +103,15 @@
                                 <p class="mb-0"><strong>{{ $application->applicant_name }}</strong></p>
                             </div>
                             <div class="col-6">
-                                <p class="text-muted small">Brand Name</p>
-                                <p class="mb-0"><strong>{{ $application->brand_name }}</strong></p>
+                                <p class="text-muted small">Application Stage</p>
+                                <p class="mb-0"><strong>{{ ($paymentType ?? 'advance') === 'final' ? 'Approved for filing' : 'Pre-payment intake complete' }}</strong></p>
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-6">
                                 <p class="text-muted small">Entity Type</p>
-                                <p class="mb-0"><strong>{{ ucfirst($application->entity_type) }}</strong></p>
+                                <p class="mb-0"><strong>{{ $application->entity_type === 'individual' ? 'Individual / Proprietor / Trader' : ucfirst($application->entity_type) }}</strong></p>
                             </div>
                             <div class="col-6">
                                 <p class="text-muted small">Application Type</p>
@@ -78,37 +127,49 @@
                         <h5 class="card-title mb-4" style="color: #1D3557;">💳 Payment Options</h5>
 
                         <div id="payment-options">
-                            <!-- Advance 50% (Default) -->
-                            <div class="payment-option mb-3" onclick="selectPaymentOption('advance', {{ $advanceAmount }})">
+                            <!-- Primary option -->
+                            <div class="payment-option mb-3" onclick="selectPaymentOption('{{ ($paymentType ?? 'advance') === 'final' ? 'final' : 'advance' }}', {{ $advanceAmount }}, this)">
                                 <div class="p-3 border rounded-lg cursor-pointer"
                                     style="border: 2px solid #2A9D8F !important; background: #f0f9f8;">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <h6 class="mb-1" style="color: #1D3557;">50% Advance Payment</h6>
-                                            <small class="text-muted">Pay now, remaining after document review</small>
+                                            <h6 class="mb-1" style="color: #1D3557;">
+                                                {{ ($paymentType ?? 'advance') === 'final' ? 'Final 50% Balance' : '50% Advance Payment' }}
+                                            </h6>
+                                            <small class="text-muted">
+                                                {{ ($paymentType ?? 'advance') === 'final' ? 'Remaining service balance before filing' : 'Pay now, remaining after draft approval' }}
+                                            </small>
                                         </div>
                                         <div>
-                                            <h5 style="color: #2A9D8F;">₹{{ number_format($advanceAmount, 0) }}</h5>
+                                            <h5 class="{{ !empty($autoApplyCoupon) ? 'coupon-price-new' : '' }}" style="{{ empty($autoApplyCoupon) ? 'color: #2A9D8F;' : '' }}">₹{{ number_format($advanceAmount, 0) }}</h5>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Full Payment -->
-                            <div class="payment-option mb-3" onclick="selectPaymentOption('full', 10)">
-                                <div class="p-3 border rounded-lg cursor-pointer"
-                                    style="border: 2px solid #e9ecef !important;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1" style="color: #1D3557;">Full Payment</h6>
-                                            <small class="text-muted">Complete payment now</small>
-                                        </div>
-                                        <div>
-                                            <h5 style="color: #4A4A4A;">₹10</h5>
+                            @if (($paymentType ?? 'advance') !== 'final')
+                                <div class="payment-option mb-3" onclick="selectPaymentOption('full', {{ $totalAmount }}, this)">
+                                    <div class="p-3 border rounded-lg cursor-pointer"
+                                        style="border: 2px solid #e9ecef !important;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1" style="color: #1D3557;">Full Payment</h6>
+                                                <small class="text-muted">Complete payment now</small>
+                                            </div>
+                                            <div>
+                                                @if (!empty($autoApplyCoupon) && ($originalTotalAmount ?? $totalAmount) > $totalAmount)
+                                                    <h5>
+                                                        <span class="coupon-price-original">₹{{ number_format($originalTotalAmount, 0) }}</span>
+                                                        <span class="coupon-price-new">₹{{ number_format($totalAmount, 0) }}</span>
+                                                    </h5>
+                                                @else
+                                                    <h5 style="color: #4A4A4A;">₹{{ number_format($totalAmount, 0) }}</h5>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
 
                             <!-- Custom Amount
                             <div class="payment-option" onclick="selectPaymentOption('custom', 0)">
@@ -156,6 +217,8 @@
                     </div>
                 </div>
 
+                @include('partials.government-fee-notice')
+
                 <!-- Terms & Conditions -->
                 <div class="alert alert-warning" role="alert">
                     <h6 class="alert-heading">⚠️ Important Notice</h6>
@@ -183,10 +246,10 @@
 
     <script>
         // Initialize payment option
-        let selectedPaymentType = 'advance';
+        let selectedPaymentType = '{{ $paymentType ?? 'advance' }}';
         let selectedAmount = {{ $advanceAmount }};
 
-        function selectPaymentOption(type, amount) {
+        function selectPaymentOption(type, amount, element = null) {
             selectedPaymentType = type;
 
             if (type === 'custom') {
@@ -198,14 +261,18 @@
             }
 
             // Update UI
-            document.querySelectorAll('.payment-option div').forEach(el => {
+            document.querySelectorAll('.payment-option > div').forEach(el => {
                 el.style.borderColor = '#e9ecef';
                 el.style.background = '#fff';
             });
 
-            if (type !== 'custom') {
-                event.currentTarget.style.borderColor = '#2A9D8F';
-                event.currentTarget.style.background = '#f0f9f8';
+            if (type !== 'custom' && element) {
+                const selectedCard = element.querySelector(':scope > div') ?? element.firstElementChild;
+
+                if (selectedCard) {
+                    selectedCard.style.borderColor = '#2A9D8F';
+                    selectedCard.style.background = '#f0f9f8';
+                }
             }
         }
 
@@ -230,8 +297,7 @@
 
         function createRazorpayOrder(amount) {
             const button = document.getElementById('pay-button');
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Order...';
+            window.LegalBruzButtonLoading?.set(button, 'Creating Order...');
 
             fetch('{{ route('payment.create-order', $application->id) }}', {
                     method: 'POST',
@@ -250,14 +316,12 @@
                         initiateRazorpayCheckout(data);
                     } else {
                         alert('Error: ' + data.message);
-                        button.disabled = false;
-                        button.innerHTML = '<i class="bi bi-credit-card me-2"></i> Proceed to Payment';
+                        window.LegalBruzButtonLoading?.reset(button);
                     }
                 })
                 .catch(error => {
                     alert('Error creating order: ' + error.message);
-                    button.disabled = false;
-                    button.innerHTML = '<i class="bi bi-credit-card me-2"></i> Proceed to Payment';
+                    window.LegalBruzButtonLoading?.reset(button);
                 });
         }
 
@@ -286,13 +350,12 @@
             rzp1.open();
 
             document.getElementById('pay-button').disabled = false;
-            document.getElementById('pay-button').innerHTML = '<i class="bi bi-credit-card me-2"></i> Proceed to Payment';
+            window.LegalBruzButtonLoading?.reset(document.getElementById('pay-button'));
         }
 
         function verifyPaymentSignature(response) {
             const button = document.getElementById('pay-button');
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying Payment...';
+            window.LegalBruzButtonLoading?.set(button, 'Verifying Payment...');
 
             fetch('{{ route('payment.verify-signature', $application->id) }}', {
                     method: 'POST',
@@ -324,8 +387,7 @@
                             title: 'Verification Failed',
                             text: data.message
                         });
-                        button.disabled = false;
-                        button.innerHTML = '<i class="bi bi-credit-card me-2"></i> Proceed to Payment';
+                        window.LegalBruzButtonLoading?.reset(button);
                     }
                 })
                 .catch(error => {
@@ -334,13 +396,12 @@
                         title: 'Error',
                         text: 'Payment verification failed: ' + error.message
                     });
-                    button.disabled = false;
-                    button.innerHTML = '<i class="bi bi-credit-card me-2"></i> Proceed to Payment';
+                    window.LegalBruzButtonLoading?.reset(button);
                 });
         }
 
         // Select advance payment by default
-        selectPaymentOption('advance', {{ $advanceAmount }});
+        selectPaymentOption('{{ $paymentType ?? 'advance' }}', {{ $advanceAmount }}, document.querySelector('.payment-option'));
     </script>
 
     <!-- SweetAlert2 for notifications -->

@@ -190,6 +190,29 @@ class DocumentController extends Controller
             color: white;
         }
 
+        .toolbar button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .button-spinner {
+            display: inline-block;
+            width: 0.9em;
+            height: 0.9em;
+            margin-right: 6px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            vertical-align: -0.12em;
+            animation: button-spin 0.7s linear infinite;
+        }
+
+        @keyframes button-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .toolbar .status {
             padding: 8px 12px;
             border-radius: 4px;
@@ -331,6 +354,10 @@ class DocumentController extends Controller
             const pageElement = document.querySelector('.page');
             const content = pageElement.innerHTML;
             const status = document.getElementById('status');
+            const saveBtn = document.getElementById('saveBtn');
+            const originalSaveHtml = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="button-spinner"></span>Saving...';
 
             try {
                 const response = await fetch('/documents/save-edited', {
@@ -367,6 +394,9 @@ class DocumentController extends Controller
                 status.textContent = '✗ Save failed';
                 status.className = 'status';
                 status.style.display = 'block';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalSaveHtml;
             }
         }
 

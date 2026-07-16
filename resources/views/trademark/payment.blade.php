@@ -29,7 +29,7 @@
                                     </tr>
                                     <tr>
                                         <td><strong>Type:</strong></td>
-                                        <td>{{ ucfirst($application->entity_type) }}</td>
+                                        <td>{{ $application->entity_type === 'individual' ? 'Individual / Proprietor / Trader' : ucfirst($application->entity_type) }}</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Industry:</strong></td>
@@ -83,6 +83,7 @@
                             </div>
 
                             <!-- Terms -->
+                            @include('partials.government-fee-notice')
                             <div class="form-check mb-4">
                                 <input class="form-check-input" type="checkbox" id="terms" required>
                                 <label class="form-check-label" for="terms">

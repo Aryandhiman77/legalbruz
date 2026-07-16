@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Trademark Registration Flow | Legal Bruz</title>
+    <title>Complete Trademark Registration Flow | Legal Bruz (LLP)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,31 +13,471 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/RegistrationGuide.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/design-system.css') }}">
+
+
+    <style>
+        /* ============ FLOW DESIGN SECTION ============ */
+        .flow-section {
+            position: relative;
+            overflow: hidden;
+            padding: 92px 0 76px;
+            background:
+                radial-gradient(circle at 0 0, rgba(42, 157, 143, 0.14) 0 92px, transparent 93px),
+                radial-gradient(circle at 100% 0, rgba(42, 157, 143, 0.12) 0 92px, transparent 93px),
+                linear-gradient(180deg, #ffffff 0%, #fbfefe 100%);
+        }
+
+        .flow-section::before,
+        .flow-section::after {
+            content: "";
+            position: absolute;
+            width: 118px;
+            height: 90px;
+            opacity: 0.48;
+            background-image: radial-gradient(circle, rgba(42, 157, 143, 0.38) 2px, transparent 3px);
+            background-size: 22px 22px;
+            pointer-events: none;
+        }
+
+        .flow-section::before {
+            top: 24px;
+            left: 26px;
+        }
+
+        .flow-section::after {
+            top: 62px;
+            right: 88px;
+        }
+
+        .flow-section .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .flow-header {
+            max-width: 960px;
+            margin: 0 auto 76px;
+            text-align: center;
+        }
+
+        .flow-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 22px;
+            margin-bottom: 22px;
+            border-radius: 999px;
+            background: #eaf8f6;
+            color: #079987;
+            font-size: 0.9rem;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .flow-header h2 {
+            margin-bottom: 18px;
+            color: var(--navy);
+            font-size: 2.8rem;
+            line-height: 1.02;
+            letter-spacing: 0;
+        }
+
+        .flow-header h2 span {
+            color: #09a895;
+        }
+
+        .flow-header p {
+            margin: 0;
+            color: #555a62;
+            font-size: 1.12rem;
+            font-weight: 500;
+        }
+
+        .flow-timeline {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(8, minmax(104px, 1fr));
+            gap: 16px;
+            margin-bottom: 52px;
+        }
+
+        .flow-timeline::before {
+            content: "";
+            position: absolute;
+            top: 31px;
+            left: 4%;
+            right: 4%;
+            height: 4px;
+            background: linear-gradient(90deg, #0a9f91 0%, rgba(10, 159, 145, 0.18) 100%);
+        }
+
+        .flow-step {
+            position: relative;
+            min-width: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .flow-step::before {
+            content: "";
+            position: absolute;
+            top: 28px;
+            right: -13px;
+            z-index: 2;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(10, 159, 145, 0.3);
+            border-radius: 50%;
+            background: #eefaf8;
+        }
+
+        .flow-step:last-child::before {
+            display: none;
+        }
+
+        .step-circle {
+            position: relative;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 62px;
+            height: 62px;
+            margin-bottom: 64px;
+            border: 0;
+            border-radius: 50%;
+            color: #ffffff;
+            background:
+                radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 0.32), transparent 28px),
+                linear-gradient(135deg, #14b8a6 0%, #078d80 100%);
+            box-shadow: 0 13px 25px rgba(8, 141, 128, 0.28);
+            font-size: 1.45rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .step-circle::before,
+        .step-circle::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .step-circle::before {
+            bottom: -48px;
+            width: 2px;
+            height: 46px;
+            background: rgba(10, 159, 145, 0.25);
+        }
+
+        .step-circle::after {
+            bottom: -52px;
+            width: 9px;
+            height: 9px;
+            border: 1px solid rgba(10, 159, 145, 0.26);
+            border-radius: 50%;
+            background: #d9f2ef;
+        }
+
+        .flow-card {
+            position: relative;
+            min-height: 300px;
+            padding: 32px 14px 26px;
+            border: 1px solid #e5eeee;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 18px 36px rgba(29, 53, 87, 0.09);
+        }
+
+        .flow-card::before {
+            content: "";
+            position: absolute;
+            top: -21px;
+            left: 50%;
+            width: 42px;
+            height: 42px;
+            transform: translateX(-50%) rotate(45deg);
+            border-top: 1px solid #e5eeee;
+            border-left: 1px solid #e5eeee;
+            border-radius: 6px 0 0 0;
+            background: #ffffff;
+        }
+
+        .flow-icon {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 84px;
+            height: 84px;
+            margin-bottom: 24px;
+            border-radius: 50%;
+            background: #edf7f6;
+            color: #079987;
+            font-size: 2rem;
+        }
+
+        .flow-section .step-title {
+            display: block;
+            min-height: 40px;
+            margin-bottom: 22px;
+            color: var(--navy);
+            font-size: 1rem;
+            font-weight: 900;
+            line-height: 1.25;
+        }
+
+        .flow-section .step-title::before {
+            content: none;
+        }
+
+        .flow-section .step-description {
+            min-height: 70px;
+            max-width: 132px;
+            margin: 0 auto;
+            color: #4f545c;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .flow-action {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            min-height: 230px;
+            padding: 42px 22px;
+            border: 1px solid #dcefed;
+            border-radius: 20px;
+            background:
+                radial-gradient(circle at 95% 110%, rgba(42, 157, 143, 0.15) 0 126px, transparent 127px),
+                linear-gradient(135deg, #f9fefd 0%, #f4fbfa 100%);
+            text-align: center;
+        }
+
+        .flow-action::before {
+            content: "";
+            position: absolute;
+            left: 76px;
+            bottom: 34px;
+            width: 240px;
+            height: 130px;
+            background:
+                linear-gradient(150deg, transparent 0 41%, #079987 42% 58%, transparent 59%),
+                linear-gradient(35deg, transparent 0 40%, #0aa896 41% 58%, transparent 59%);
+            clip-path: polygon(0 16%, 100% 0, 68% 76%, 47% 58%, 26% 86%);
+            opacity: 0.9;
+            transform: rotate(-9deg) scale(0.36);
+            transform-origin: left bottom;
+        }
+
+        .flow-action::after {
+            content: "";
+            position: absolute;
+            right: 70px;
+            top: 42px;
+            width: 260px;
+            height: 82px;
+            opacity: 0.45;
+            border-top: 2px dashed rgba(10, 159, 145, 0.35);
+            border-radius: 50%;
+            transform: rotate(-16deg);
+        }
+
+        .flow-action-content {
+            position: relative;
+            z-index: 1;
+            max-width: 560px;
+        }
+
+        .flow-action-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 54px;
+            height: 54px;
+            margin-bottom: 14px;
+            border-radius: 50%;
+            background: #e4f6f3;
+            color: #079987;
+            font-size: 1.7rem;
+        }
+
+        .flow-action h3 {
+            margin-bottom: 6px;
+            color: #079987;
+            font-size: 1.28rem;
+            font-weight: 900;
+        }
+
+        .flow-action p {
+            margin-bottom: 26px;
+            color: #4f545c;
+            font-size: 1.02rem;
+        }
+
+        .flow-guide-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            min-width: min(100%, 340px);
+            padding: 15px 30px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #10b7a5 0%, #079987 100%);
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 900;
+            text-decoration: none;
+            box-shadow: 0 16px 34px rgba(7, 153, 135, 0.28);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .flow-guide-btn:hover {
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(7, 153, 135, 0.34);
+        }
+
+        @media (max-width: 1199px) {
+            .flow-timeline {
+                grid-template-columns: repeat(4, minmax(150px, 1fr));
+                row-gap: 38px;
+            }
+
+            .flow-timeline::before,
+            .flow-step::before {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .flow-section {
+                padding: 72px 0 54px;
+            }
+
+            .flow-section::before,
+            .flow-section::after {
+                width: 82px;
+                height: 64px;
+                background-size: 18px 18px;
+            }
+
+            .flow-header {
+                margin-bottom: 44px;
+            }
+
+            .flow-header h2 {
+                font-size: clamp(2rem, 12vw, 3rem);
+            }
+
+            .flow-header p {
+                font-size: 0.98rem;
+            }
+
+            .flow-timeline {
+                grid-template-columns: 1fr;
+                gap: 28px;
+                max-width: 420px;
+                margin-inline: auto;
+            }
+
+            .step-circle {
+                display: inline-flex;
+                margin-bottom: 42px;
+            }
+
+            .step-circle::before {
+                bottom: -34px;
+                height: 32px;
+            }
+
+            .step-circle::after {
+                bottom: -39px;
+            }
+
+            .flow-card {
+                min-height: auto;
+                padding: 30px 22px 24px;
+            }
+
+            .flow-section .step-title {
+                min-height: 0;
+                margin-bottom: 14px;
+                justify-content: center;
+                font-size: 1rem;
+            }
+
+            .flow-section .step-description {
+                min-height: 0;
+                max-width: 260px;
+            }
+
+            .flow-action {
+                min-height: 250px;
+            }
+
+            .flow-action::before {
+                left: 18px;
+                bottom: 8px;
+            }
+
+            .flow-action::after {
+                right: -80px;
+                top: 28px;
+            }
+        }
+
+        /* Responsive Logo Styling */
+        .navbar-logo {
+            height: 56px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-logo {
+                height: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-logo {
+                height: 40px;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <!-- ============ NAVBAR ============ -->
-    <nav class="navbar navbar-expand-lg sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-shield-check" style="margin-right: 8px;"></i>Legal Bruz
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ route('home') }}"
+                style="font-size: 1.5rem; color: #1D3557;">
+                <img src="{{ asset('logo.png') }}" alt="Legal Bruz (LLP) logo" class="navbar-logo">
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#guestNavbar"
+                aria-controls="guestNavbar" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+
+            <div class="collapse navbar-collapse" id="guestNavbar">
+                <ul class="navbar-nav ms-auto align-items-center gap-3">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        <a class="nav-link" href="{{ route('home') }}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#flow">Flow</a>
+                        <a class="nav-link" href="{{ route('login') }}">Login</a>
                     </li>
-                    @auth
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('trademark.type-selection') }}">Start</a>
-                        </li>
-                    @endauth
+                    <li class="nav-item">
+                        <a class="btn btn-nav-logout" href="{{ route('register') }}">Sign Up</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -54,53 +494,98 @@
     <!-- ============ QUICK FLOW TIMELINE ============ -->
     <section class="flow-section" id="flow">
         <div class="container">
-            <div class="section-title">
-                <h2>8-Step Registration Journey</h2>
+            <div class="flow-header">
+                <div class="flow-kicker">
+                    <i class="bi bi-stars"></i>
+                    <span>8 Simple Steps</span>
+                </div>
+                <h2><span>8-Step</span> Registration Journey</h2>
                 <p>See how your trademark moves from application to registration</p>
             </div>
 
-            <div class="flow-container">
-                <div class="flow-timeline">
-                    <div class="flow-step">
-                        <div class="step-circle">1️⃣</div>
+            <div class="flow-timeline">
+                <div class="flow-step">
+                    <div class="step-circle">1</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-person-plus"></i></div>
                         <div class="step-title">Sign Up</div>
                         <div class="step-description">Create account & receive welcome email</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">2️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">2</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-clipboard-check"></i></div>
                         <div class="step-title">Choose Type</div>
                         <div class="step-description">Individual, Company, or LLP</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">3️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">3</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
                         <div class="step-title">Payment & Docs</div>
                         <div class="step-description">Pay 50% + view requirements</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">4️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">4</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-pencil-square"></i></div>
                         <div class="step-title">Fill Form</div>
                         <div class="step-description">Complete application details</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">5️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">5</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-file-earmark-check"></i></div>
                         <div class="step-title">Generate Docs</div>
                         <div class="step-description">Affidavit & POA created</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">6️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">6</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-shield-check"></i></div>
                         <div class="step-title">Admin Review</div>
                         <div class="step-description">Check & filing by admin</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">7️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">7</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-cloud-arrow-down"></i></div>
                         <div class="step-title">Download</div>
                         <div class="step-description">Get application document</div>
+
                     </div>
-                    <div class="flow-step">
-                        <div class="step-circle">8️⃣</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-circle">8</div>
+                    <div class="flow-card">
+                        <div class="flow-icon"><i class="bi bi-bar-chart-line"></i></div>
                         <div class="step-title">Track Status</div>
                         <div class="step-description">Monitor in dashboard</div>
+
                     </div>
+                </div>
+            </div>
+
+            <div class="flow-action">
+                <div class="flow-action-content">
+                    <div class="flow-action-icon"><i class="bi bi-shield-check"></i></div>
+                    <h3>Simple. Transparent. Hassle-free.</h3>
+                    <p>From application to registration, we make it easy.</p>
+                    <a href="{{ route('flow-guide') }}" class="flow-guide-btn">
+                        View Complete Flow Guide <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
@@ -198,8 +683,9 @@
                         </div>
                         <div class="info-box">
                             <h5>💰 Payment Details</h5>
-                            <p><strong>₹2,500</strong> for Individual | <strong>₹3,500</strong> for Company (50% advance
-                                + 18% GST)</p>
+                            <p><strong>₹7,000</strong> for Individual | <strong>₹9,000</strong> for Company <b>/</b> LLP
+                                <b>/</b> Partnership <b>/</b> NGO. (50% advance)
+                            </p>
                         </div>
                         <span class="actor-badge user">User Action</span>
                     </div>
@@ -362,28 +848,28 @@
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
-                        <h4>🎯 Week 1: Registration & Preparation</h4>
-                        <p><strong>Day 1-2:</strong> User signup and entity type selection</p>
-                        <p><strong>Day 3-5:</strong> KYC verification and document submission</p>
-                        <p><strong>Day 6-7:</strong> Payment and form filling</p>
+                        <h4>🎯 Day 1: Registration & Preparation</h4>
+                        <p>-> User signup and entity type selection</p>
+                        <p>-> KYC verification and document submission</p>
+                        <p>-> Payment and form filling</p>
                     </div>
                 </div>
 
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
-                        <h4>📝 Week 2: Document Generation & Admin Filing</h4>
-                        <p><strong>Day 8-10:</strong> Affidavit & POA auto-generation</p>
-                        <p><strong>Day 11-14:</strong> Admin review and official IPO filing</p>
+                        <h4>📝 Day 2: Document Generation & Admin Filing</h4>
+                        <p>-> Affidavit & POA auto-generation</p>
+                        <p>-> Admin review and official IPO filing</p>
                     </div>
                 </div>
 
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
-                        <h4>✅ Week 3: Confirmation & Monitoring</h4>
-                        <p><strong>Day 15-21:</strong> Download application receipt</p>
-                        <p><strong>Ongoing:</strong> Track status in dashboard</p>
+                        <h4>✅ Day 3: Confirmation & Monitoring</h4>
+                        <p>-> Download application receipt</p>
+                        <p>-> Track status in dashboard</p>
                     </div>
                 </div>
 
@@ -412,7 +898,8 @@
                 <div class="col-md-6">
                     <div class="info-box">
                         <h5>💡 50% Advance Payment Policy</h5>
-                        <p>You pay 50% (₹2,500 for Individual) in advance. Remaining 50% is paid after admin approval
+                        <p>You pay 50% (₹7,000 for Individual / Proprietor / Trader) in advance. Remaining 50% is paid
+                            after admin approval
                             and before or at IPO filing. No filing happens without payment.</p>
                     </div>
                 </div>
@@ -462,7 +949,7 @@
             <h2 style="color: var(--white); font-size: 2.5rem; margin-bottom: 20px;">Ready to Start Your Registration?
             </h2>
             <p style="font-size: 1.1rem; opacity: 0.9; margin-bottom: 40px;">Join thousands of registered trademarks.
-                Complete process in just 3 weeks!</p>
+                Complete process in just 48 hours, after complete upload of documents.</p>
             @auth
                 <a href="{{ route('trademark.type-selection') }}" class="btn-primary-custom">Start Now</a>
             @else
@@ -473,7 +960,7 @@
 
     <!-- ============ FOOTER ============ -->
     <footer>
-        <p>&copy; 2026 Legal Bruz - India's Fastest Trademark Registration Platform</p>
+        <p>&copy; 2026 Legal Bruz (LLP) - India's Fastest Trademark Registration Platform</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

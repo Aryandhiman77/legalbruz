@@ -18,6 +18,7 @@ class Document extends Model
         'status',
         'verification_notes',
         'verified_at',
+        'created_at',
     ];
 
     protected $casts = [

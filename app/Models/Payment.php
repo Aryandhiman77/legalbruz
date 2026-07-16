@@ -12,6 +12,7 @@ class Payment extends Model
         'user_id',
         'amount',
         'total_amount',
+        'payment_type',
         'percentage',
         'transaction_id',
         'payment_method',
@@ -21,6 +22,7 @@ class Payment extends Model
         'rejected_at',
         'rejection_reason',
         'reference_number',
+        'created_at',
     ];
 
     protected $casts = [
@@ -39,5 +41,86 @@ class Payment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function invoiceDiscountAmount(): float
+    {
+        $baseAmount = $this->invoiceDiscountBaseAmount();
+
+        if ($baseAmount <= 0) {
+            return 0.0;
+        }
+
+        $discountAmount = $baseAmount - (float) $this->amount;
+
+        if ($discountAmount <= 0) {
+            return 0.0;
+        }
+
+        return round($discountAmount, 2);
+    }
+
+    public function invoiceDiscountPercent(): ?float
+    {
+        $baseAmount = $this->invoiceDiscountBaseAmount();
+
+        if ($baseAmount <= 0) {
+            return null;
+        }
+
+        $discountAmount = $this->invoiceDiscountAmount();
+
+        if ($discountAmount <= 0) {
+            return null;
+        }
+
+        return round(($discountAmount / $baseAmount) * 100, 2);
+    }
+
+    public function invoiceDiscountLabel(): ?string
+    {
+        $percent = $this->invoiceDiscountPercent();
+
+        if ($percent === null) {
+            return null;
+        }
+
+        return rtrim(rtrim(number_format($percent, 2), '0'), '.') . '% OFF';
+    }
+
+    public function isAdvanceInvoice(): bool
+    {
+        return strtolower((string) ($this->payment_type ?? '')) === 'advance'
+            || (string) $this->percentage === '50%';
+    }
+
+    public function invoiceAdvanceBaseAmount(): float
+    {
+        return round(((float) $this->total_amount) * 0.5, 2);
+    }
+
+    private function invoiceDiscountBaseAmount(): float
+    {
+        $paymentType = strtolower((string) ($this->payment_type ?? ''));
+
+        if ($this->isAdvanceInvoice()) {
+            return $this->invoiceAdvanceBaseAmount();
+        }
+
+        if ($paymentType === 'full') {
+            return (float) $this->total_amount;
+        }
+
+        if ($paymentType === 'final' && $this->application_id && (float) $this->total_amount > 0) {
+            $previousPaidAmount = static::query()
+                ->where('application_id', $this->application_id)
+                ->whereIn('status', ['completed', 'approved'])
+                ->where('id', '<', $this->id)
+                ->sum('amount');
+
+            return max((float) $this->total_amount - (float) $previousPaidAmount, 0);
+        }
+
+        return (float) $this->amount;
     }
 }

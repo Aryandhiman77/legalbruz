@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\Document;
 use App\Models\Payment;
+use App\Services\TrademarkWorkflowService;
+use App\Support\TrademarkWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrademarkController extends Controller
 {
+    private const GST_NUMBER_REGEX = '/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/';
+    private const MOBILE_NUMBER_REGEX = '/^[6789]\d{9}$/';
+    private const PINCODE_REGEX = '/^\d{6}$/';
+
     /**
      * Show trademark type selection
      */
@@ -55,45 +63,155 @@ class TrademarkController extends Controller
     /**
      * Store trademark application
      */
-    public function storeApplication(Request $request)
+    public function storeApplication(Request $request, TrademarkWorkflowService $workflow)
     {
         $validated = $request->validate([
-            'entity_type' => 'required|in:individual,company',
-            'applicant_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
-            'brand_name' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'description' => 'required|string',
-            'industry' => 'required|string|max:255',
-            'usage_type' => 'required|in:india,international,both',
-            'first_use_date' => 'nullable|date',
-            'currently_selling' => 'boolean',
-            'website' => 'nullable|url',
-        ]);
+            'billing_name' => 'required|string|max:255',
+            'billing_address' => 'required|string|max:500',
+            'billing_email' => 'required|email|max:255',
+            'billing_mobile' => ['required', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'gst_number' => ['nullable', 'string', 'max:15', 'regex:' . self::GST_NUMBER_REGEX],
 
+            'applicant_name' => 'required|string|max:255',
+            'applicant_address' => 'required|string|max:500',
+            'applicant_district' => 'required|string|max:255',
+            'applicant_state' => 'required|string|max:255',
+            'applicant_pincode' => ['required', 'string', 'size:6', 'regex:' . self::PINCODE_REGEX],
+            'applicant_phone' => ['required', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'applicant_email' => 'required|email|max:255',
+            'type_of_applicant' => 'required|in:individual,company,llp,ngo,small_enterprise,startup,others',
+
+            'signatory_name' => 'required|string|max:255',
+            'signatory_father_name' => 'required|string|max:255',
+            'signatory_address' => 'required|string|max:500',
+            'signatory_district' => 'required|string|max:255',
+            'signatory_state' => 'required|string|max:255',
+            'signatory_pincode' => ['required', 'string', 'size:6', 'regex:' . self::PINCODE_REGEX],
+            'signatory_phone' => ['required', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'signatory_email' => 'required|email|max:255',
+            'signatory_designation' => 'required|in:director,partner,proprietor,authorised_signatory',
+
+            'co_applicant_name' => 'nullable|string|max:255',
+            'co_applicant_father_name' => 'nullable|string|max:255',
+            'co_applicant_address' => 'nullable|string|max:500',
+            'co_applicant_state' => 'nullable|string|max:255',
+            'co_applicant_district' => 'nullable|string|max:255',
+            'co_applicant_pincode' => ['nullable', 'string', 'size:6', 'regex:' . self::PINCODE_REGEX],
+            'co_applicant_mobile' => ['nullable', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'co_applicant_email' => 'nullable|email|max:255',
+            'co_applicant_designation' => 'nullable|in:co_applicant,partner',
+
+            'trademark_type' => 'required|in:word,device,shape_of_goods,colour,sound_mark,three_dimensional,taste_mark,smell_mark',
+            'mark_brand' => 'required|string|max:255',
+            'trademark_language' => 'required|string|max:255',
+            'trademark_origin_description' => 'required|string|max:1000',
+            'mark_conditions' => 'nullable|string|max:1000',
+            'trademark_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'goods_services' => 'required|string|max:2000',
+            'trade_description' => 'required|in:manufacturer,trader,service_provider',
+            'trademark_usage_status' => 'required|in:used,proposed',
+            'trademark_use_date' => 'nullable|date',
+            'proof_of_use' => 'required|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+            'application_type' => 'required|in:trademark,certification,collective,series',
+        ], $this->validationMessages());
+
+        $entityType = $validated['type_of_applicant'] === 'individual' ? 'individual' : 'company';
+        $billingAddress = trim($validated['billing_address']);
+        $applicantFullAddress = trim(
+            $validated['applicant_address'] . ', ' .
+            $validated['applicant_district'] . ', ' .
+            $validated['applicant_state'] . ' - ' .
+            $validated['applicant_pincode']
+        );
         $logoPath = null;
-        if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('logos', 'public');
+        $proofOfUsePath = null;
+
+        if ($request->hasFile('trademark_image')) {
+            $logoPath = $request->file('trademark_image')->store('logos', 'public');
+        }
+
+        if ($request->hasFile('proof_of_use')) {
+            $proofOfUsePath = $request->file('proof_of_use')->store('proof-of-use', 'public');
         }
 
         $application = Application::create([
             'user_id' => Auth::id(),
-            'type' => 'trademark',
-            'entity_type' => $validated['entity_type'],
+            'type' => $validated['application_type'],
+            'entity_type' => $entityType,
             'applicant_name' => $validated['applicant_name'],
-            'phone' => $validated['phone'],
-            'email' => $validated['email'],
-            'brand_name' => $validated['brand_name'],
+            'phone' => $validated['applicant_phone'],
+            'email' => $validated['applicant_email'],
+            'brand_name' => $validated['mark_brand'],
             'logo_path' => $logoPath,
-            'description' => $validated['description'],
-            'industry' => $validated['industry'],
-            'usage_type' => $validated['usage_type'],
-            'first_use_date' => $validated['first_use_date'] ?? null,
-            'currently_selling' => $validated['currently_selling'] ?? false,
-            'website' => $validated['website'] ?? null,
+            'description' => $validated['trademark_origin_description'],
+            'industry' => $validated['trade_description'],
+            'usage_type' => 'india',
+            'first_use_date' => $validated['trademark_usage_status'] === 'used'
+                ? ($validated['trademark_use_date'] ?? null)
+                : null,
+            'currently_selling' => $validated['trademark_usage_status'] === 'used',
+            'address' => $applicantFullAddress,
+            'goods_services' => $validated['goods_services'],
+            'usage' => $validated['trademark_usage_status'] === 'used' ? 'used' : 'proposed',
+            'members_details' => [
+                'billing_company_details' => [
+                    'billing_name' => $validated['billing_name'],
+                    'billing_address' => $billingAddress,
+                    'billing_email' => $validated['billing_email'],
+                    'billing_mobile' => $validated['billing_mobile'],
+                    'gst_number' => $validated['gst_number'] ?? null,
+                ],
+                'trademark_applicant_details' => [
+                    'applicant_name' => $validated['applicant_name'],
+                    'address_of_applicant' => $validated['applicant_address'],
+                    'district' => $validated['applicant_district'],
+                    'state' => $validated['applicant_state'],
+                    'pin_code' => $validated['applicant_pincode'],
+                    'phone_mobile_number' => $validated['applicant_phone'],
+                    'email_id' => $validated['applicant_email'],
+                    'type_of_applicant' => $validated['type_of_applicant'],
+                ],
+                'details_of_signatory' => [
+                    'name_of_signatory' => $validated['signatory_name'],
+                    'fathers_name' => $validated['signatory_father_name'],
+                    'address_of_ar_signatory' => $validated['signatory_address'],
+                    'district' => $validated['signatory_district'],
+                    'state' => $validated['signatory_state'],
+                    'pin_code' => $validated['signatory_pincode'],
+                    'phone_mobile_number' => $validated['signatory_phone'],
+                    'email_id' => $validated['signatory_email'],
+                    'designation_of_signatory' => $validated['signatory_designation'],
+                ],
+                'details_of_co_applicant_or_partners' => [
+                    'name_of_co_applicant_partner' => $validated['co_applicant_name'] ?? null,
+                    'fathers_name' => $validated['co_applicant_father_name'] ?? null,
+                    'address' => $validated['co_applicant_address'] ?? null,
+                    'state' => $validated['co_applicant_state'] ?? null,
+                    'district' => $validated['co_applicant_district'] ?? null,
+                    'pin_code' => $validated['co_applicant_pincode'] ?? null,
+                    'mobile_number' => $validated['co_applicant_mobile'] ?? null,
+                    'email_id' => $validated['co_applicant_email'] ?? null,
+                    'designation' => $validated['co_applicant_designation'] ?? null,
+                ],
+                'trademark_details' => [
+                    'trademark_type' => $validated['trademark_type'],
+                    'mark_brand_in_words' => $validated['mark_brand'],
+                    'language_of_trademark' => $validated['trademark_language'],
+                    'origin_of_trademark' => $validated['trademark_origin_description'],
+                    'conditions_or_limitations' => $validated['mark_conditions'] ?? null,
+                    'image_of_trademark' => $logoPath,
+                    'goods_or_services' => $validated['goods_services'],
+                    'trade_description' => $validated['trade_description'],
+                    'user_date_or_proposed' => $validated['trademark_usage_status'],
+                    'trademark_use_date' => $validated['trademark_use_date'] ?? null,
+                    'proof_of_use_of_trademark' => $proofOfUsePath,
+                    'application_type' => $validated['application_type'],
+                ],
+            ],
             'status' => 'payment_pending',
         ]);
+
+        $workflow->initialize($application);
 
         return redirect()->route('payment.show', $application->id)
             ->with('success', 'Application created. Please complete 50% payment.');
@@ -112,8 +230,8 @@ class TrademarkController extends Controller
 
         $payment = $application->payments()->where('status', 'completed')->first();
         if ($payment) {
-            return redirect()->route('trademark.detailed-form', $application->id)
-                ->with('info', 'Payment already completed. Proceed with details.');
+            return redirect()->route('trademark.status', $application->id)
+                ->with('info', 'Payment already completed. Your application is with the admin team.');
         }
 
         $amount = 2500;
@@ -137,15 +255,14 @@ class TrademarkController extends Controller
             abort(403);
         }
 
-        $payment = $application->payments()->where('status', 'completed')->firstOrFail();
-
-        return view('trademark.detailed-form', ['application' => $application]);
+        return redirect()->route('trademark.status', $application->id)
+            ->with('error', 'Application editing is disabled after payment.');
     }
 
     /**
      * Store detailed form
      */
-    public function storeDetailedForm(Request $request, $applicationId)
+    public function storeDetailedForm(Request $request, $applicationId, TrademarkWorkflowService $workflow)
     {
         $application = Application::findOrFail($applicationId);
 
@@ -153,34 +270,177 @@ class TrademarkController extends Controller
             abort(403);
         }
 
+        return redirect()->route('trademark.status', $application->id)
+            ->with('error', 'Application editing is disabled after payment.');
+
+        if (!in_array($application->current_status, [TrademarkWorkflow::APPLICATION_SUBMITTED], true)) {
+            return redirect()->route('trademark.status', $application->id)
+                ->with('error', 'Application editing is disabled after it has been submitted for admin review.');
+        }
+
+        $existingDetails = $application->members_details ?? [];
+        $existingTrademarkDetails = $existingDetails['trademark_details'] ?? [];
+        $existingTrademarkImagePath = $application->logo_path ?: ($existingTrademarkDetails['image_of_trademark'] ?? null);
+        $existingProofOfUsePath = $existingTrademarkDetails['proof_of_use_of_trademark'] ?? null;
+        $hasTrademarkImage = filled($existingTrademarkImagePath)
+            && Storage::disk('public')->exists($this->normalizePublicStoragePath((string) $existingTrademarkImagePath));
+        $hasProofOfUse = filled($existingProofOfUsePath)
+            && Storage::disk('public')->exists($this->normalizePublicStoragePath((string) $existingProofOfUsePath));
+
         $validated = $request->validate([
+            'billing_name' => 'required|string|max:255',
+            'billing_address' => 'required|string|max:500',
+            'billing_email' => 'required|email|max:255',
+            'billing_mobile' => ['required', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'gst_number' => ['nullable', 'string', 'max:15', 'regex:' . self::GST_NUMBER_REGEX],
+
             'applicant_name' => 'required|string|max:255',
-            'brand_name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'nationality' => 'required|string|max:255',
-            'address' => 'required|string|max:500',
-            'gender' => 'required|in:male,female,other',
-            'classes' => 'required|array|min:1',
-            'classes.*' => 'required|string|max:45',
-            'goods_services' => 'required|string|min:10',
-            'usage' => 'required|in:used,proposed',
-        ]);
+            'applicant_address' => 'required|string|max:500',
+            'applicant_district' => 'required|string|max:255',
+            'applicant_state' => 'required|string|max:255',
+            'applicant_pincode' => ['required', 'string', 'size:6', 'regex:' . self::PINCODE_REGEX],
+            'applicant_phone' => ['required', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'applicant_email' => 'required|email|max:255',
+            'type_of_applicant' => 'required|in:individual,company,llp,ngo,small_enterprise,startup,others',
+
+            'signatory_name' => 'required|string|max:255',
+            'signatory_father_name' => 'required|string|max:255',
+            'signatory_address' => 'required|string|max:500',
+            'signatory_district' => 'required|string|max:255',
+            'signatory_state' => 'required|string|max:255',
+            'signatory_pincode' => ['required', 'string', 'size:6', 'regex:' . self::PINCODE_REGEX],
+            'signatory_phone' => ['required', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'signatory_email' => 'required|email|max:255',
+            'signatory_designation' => 'required|in:director,partner,proprietor,authorised_signatory',
+
+            'co_applicant_name' => 'nullable|string|max:255',
+            'co_applicant_father_name' => 'nullable|string|max:255',
+            'co_applicant_address' => 'nullable|string|max:500',
+            'co_applicant_state' => 'nullable|string|max:255',
+            'co_applicant_district' => 'nullable|string|max:255',
+            'co_applicant_pincode' => ['nullable', 'string', 'size:6', 'regex:' . self::PINCODE_REGEX],
+            'co_applicant_mobile' => ['nullable', 'string', 'size:10', 'regex:' . self::MOBILE_NUMBER_REGEX],
+            'co_applicant_email' => 'nullable|email|max:255',
+            'co_applicant_designation' => 'nullable|in:co_applicant,partner',
+
+            'trademark_type' => 'required|in:word,device,shape_of_goods,colour,sound_mark,three_dimensional,taste_mark,smell_mark',
+            'mark_brand' => 'required|string|max:255',
+            'trademark_language' => 'required|string|max:255',
+            'trademark_origin_description' => 'required|string|max:1000',
+            'mark_conditions' => 'nullable|string|max:1000',
+            'trademark_image' => ($hasTrademarkImage ? 'nullable' : 'required') . '|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'goods_services' => 'required|string|max:2000',
+            'trade_description' => 'required|in:manufacturer,trader,service_provider',
+            'trademark_usage_status' => 'required|in:used,proposed',
+            'trademark_use_date' => 'nullable|date',
+            'proof_of_use' => ($hasProofOfUse ? 'nullable' : 'required') . '|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+            'application_type' => 'required|in:trademark,certification,collective,series',
+        ], $this->validationMessages());
+
+        $entityType = $validated['type_of_applicant'] === 'individual' ? 'individual' : 'company';
+        $billingAddress = trim($validated['billing_address']);
+        $applicantFullAddress = trim(
+            $validated['applicant_address'] . ', ' .
+            $validated['applicant_district'] . ', ' .
+            $validated['applicant_state'] . ' - ' .
+            $validated['applicant_pincode']
+        );
+
+        $logoPath = $application->logo_path;
+        if ($request->hasFile('trademark_image')) {
+            $logoPath = $request->file('trademark_image')->store('logos', 'public');
+        }
+
+        $proofOfUsePath = $existingTrademarkDetails['proof_of_use_of_trademark'] ?? null;
+        if ($request->hasFile('proof_of_use')) {
+            $proofOfUsePath = $request->file('proof_of_use')->store('proof-of-use', 'public');
+        }
 
         $application->update([
             'applicant_name' => $validated['applicant_name'],
-            'brand_name' => $validated['brand_name'],
-            'description' => $validated['description'],
-            'nationality' => $validated['nationality'],
-            'address' => $validated['address'],
-            'gender' => $validated['gender'],
-            'classes' => json_encode($validated['classes']),
+            'entity_type' => $entityType,
+            'type' => $validated['application_type'],
+            'phone' => $validated['applicant_phone'],
+            'email' => $validated['applicant_email'],
+            'brand_name' => $validated['mark_brand'],
+            'logo_path' => $logoPath,
+            'description' => $validated['trademark_origin_description'],
+            'industry' => $validated['trade_description'],
+            'usage_type' => 'india',
+            'first_use_date' => $validated['trademark_usage_status'] === 'used'
+                ? ($validated['trademark_use_date'] ?? null)
+                : null,
+            'currently_selling' => $validated['trademark_usage_status'] === 'used',
+            'address' => $applicantFullAddress,
             'goods_services' => $validated['goods_services'],
-            'usage' => $validated['usage'],
-            'status' => 'pending_documents',
+            'usage' => $validated['trademark_usage_status'] === 'used' ? 'used' : 'proposed',
+            'members_details' => [
+                'billing_company_details' => [
+                    'billing_name' => $validated['billing_name'],
+                    'billing_address' => $billingAddress,
+                    'billing_email' => $validated['billing_email'],
+                    'billing_mobile' => $validated['billing_mobile'],
+                    'gst_number' => $validated['gst_number'] ?? null,
+                ],
+                'trademark_applicant_details' => [
+                    'applicant_name' => $validated['applicant_name'],
+                    'address_of_applicant' => $validated['applicant_address'],
+                    'district' => $validated['applicant_district'],
+                    'state' => $validated['applicant_state'],
+                    'pin_code' => $validated['applicant_pincode'],
+                    'phone_mobile_number' => $validated['applicant_phone'],
+                    'email_id' => $validated['applicant_email'],
+                    'type_of_applicant' => $validated['type_of_applicant'],
+                ],
+                'details_of_signatory' => [
+                    'name_of_signatory' => $validated['signatory_name'],
+                    'fathers_name' => $validated['signatory_father_name'],
+                    'address_of_ar_signatory' => $validated['signatory_address'],
+                    'district' => $validated['signatory_district'],
+                    'state' => $validated['signatory_state'],
+                    'pin_code' => $validated['signatory_pincode'],
+                    'phone_mobile_number' => $validated['signatory_phone'],
+                    'email_id' => $validated['signatory_email'],
+                    'designation_of_signatory' => $validated['signatory_designation'],
+                ],
+                'details_of_co_applicant_or_partners' => [
+                    'name_of_co_applicant_partner' => $validated['co_applicant_name'] ?? null,
+                    'fathers_name' => $validated['co_applicant_father_name'] ?? null,
+                    'address' => $validated['co_applicant_address'] ?? null,
+                    'state' => $validated['co_applicant_state'] ?? null,
+                    'district' => $validated['co_applicant_district'] ?? null,
+                    'pin_code' => $validated['co_applicant_pincode'] ?? null,
+                    'mobile_number' => $validated['co_applicant_mobile'] ?? null,
+                    'email_id' => $validated['co_applicant_email'] ?? null,
+                    'designation' => $validated['co_applicant_designation'] ?? null,
+                ],
+                'trademark_details' => [
+                    'trademark_type' => $validated['trademark_type'],
+                    'mark_brand_in_words' => $validated['mark_brand'],
+                    'language_of_trademark' => $validated['trademark_language'],
+                    'origin_of_trademark' => $validated['trademark_origin_description'],
+                    'conditions_or_limitations' => $validated['mark_conditions'] ?? null,
+                    'image_of_trademark' => $logoPath,
+                    'goods_or_services' => $validated['goods_services'],
+                    'trade_description' => $validated['trade_description'],
+                    'user_date_or_proposed' => $validated['trademark_usage_status'],
+                    'trademark_use_date' => $validated['trademark_use_date'] ?? null,
+                    'proof_of_use_of_trademark' => $proofOfUsePath,
+                    'application_type' => $validated['application_type'],
+                ],
+            ],
         ]);
 
-        return redirect()->route('documents.upload', $application->id)
-            ->with('success', 'Details saved. Please upload required documents.');
+        $reviewNoteUpdates = ['rejection_reason' => null];
+        if (Schema::hasColumn('applications', 'admin_review_note')) {
+            $reviewNoteUpdates['admin_review_note'] = null;
+        }
+        $application->forceFill($reviewNoteUpdates)->save();
+
+        $workflow->submitForReview($application->fresh());
+
+        return redirect()->route('trademark.status', $application->id)
+            ->with('success', 'Your application has been submitted for admin review.');
     }
 
     /**
@@ -194,31 +454,13 @@ class TrademarkController extends Controller
             abort(403);
         }
 
-        $documentTypes = [
-            'individual' => [
-                'pan_card' => 'PAN Card',
-                'address_proof' => 'Address Proof',
-                
-            ],
-            'company' => [
-                'certificate_of_incorporation' => 'Certificate of Incorporation',
-                'pan_card' => 'PAN Card',
-                'gst_certificate' => 'GST Certificate',
-                'authorized_signatory_id' => 'Authorized Signatory ID',
-               
-            ]
-        ];
-
-        return view('trademark.upload-documents', [
-            'application' => $application,
-            'documentTypes' => $documentTypes[$application->entity_type] ?? []
-        ]);
+        return redirect(route('trademark.status', ['id' => $application->id, 'stage_action' => 1]) . '#stage-action');
     }
 
     /**
      * Store uploaded documents
      */
-    public function storeDocuments(Request $request, $applicationId)
+    public function storeDocuments(Request $request, $applicationId, TrademarkWorkflowService $workflow)
     {
         $application = Application::findOrFail($applicationId);
 
@@ -248,10 +490,10 @@ class TrademarkController extends Controller
             }
         }
 
-        $application->update(['status' => 'pending_admin']);
+        $workflow->refreshOnboardingStatus($application);
 
-        return redirect()->route('dashboard')
-            ->with('success', 'Application submitted for admin approval!');
+        return redirect()->route('trademark.status', $application->id)
+            ->with('success', 'Documents uploaded successfully.');
     }
 
     /**
@@ -273,13 +515,218 @@ class TrademarkController extends Controller
      */
     public function showStatus($applicationId)
     {
-        $application = Application::with('documents', 'payments')->findOrFail($applicationId);
+        $application = Application::with($this->applicationRelations())->findOrFail($applicationId);
 
         if ($application->user_id !== Auth::id()) {
             abort(403);
         }
 
+        $application = $this->normalizeApplicationRelations($application);
+
         return view('trademark.status', ['application' => $application]);
+    }
+
+    /**
+     * Show previously submitted application data and documents for a workflow stage.
+     */
+    public function showStageDetails($applicationId, string $stage)
+    {
+        $application = Application::with($this->applicationRelations())->findOrFail($applicationId);
+
+        if ($application->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $application = $this->normalizeApplicationRelations($application);
+
+        return view('trademark.stage-details', [
+            'application' => $application,
+            'stage' => $stage,
+        ]);
+    }
+
+    /**
+     * View stored trademark image
+     */
+    public function viewTrademarkImage(Request $request, $applicationId)
+    {
+        $application = Application::findOrFail($applicationId);
+
+        if (!$this->canViewApplicationFile($application)) {
+            abort(403);
+        }
+
+        $imagePath = $this->resolvePublicFilePath([
+            $this->decodedFileQuery($request),
+            data_get($application->members_details, 'trademark_details.image_of_trademark'),
+            $application->logo_path,
+        ], ['logos']);
+
+        if (!$imagePath) {
+            abort(404, 'Trademark image file is missing from storage. Please re-upload the trademark image from the application details form.');
+        }
+
+        return response()->file($imagePath);
+    }
+
+    /**
+     * View stored proof of use file
+     */
+    public function viewProofOfUse(Request $request, $applicationId)
+    {
+        $application = Application::findOrFail($applicationId);
+
+        if (!$this->canViewApplicationFile($application)) {
+            abort(403);
+        }
+
+        $proofOfUsePath = $this->resolvePublicFilePath([
+            $this->decodedFileQuery($request),
+            data_get($application->members_details, 'trademark_details.proof_of_use_of_trademark'),
+        ], ['proof-of-use']);
+
+        if (!$proofOfUsePath) {
+            abort(404, 'Proof of use file not found.');
+        }
+
+        return response()->file($proofOfUsePath);
+    }
+
+    private function canViewApplicationFile(Application $application): bool
+    {
+        if (Auth::guard('admin')->check()) {
+            return true;
+        }
+
+        return Auth::check() && $application->user_id === Auth::id();
+    }
+
+    private function resolvePublicFilePath(array $paths, array $fallbackDirectories = []): ?string
+    {
+        foreach ($paths as $path) {
+            if (!is_string($path) || trim($path) === '') {
+                continue;
+            }
+
+            $absolutePath = $this->resolveAbsolutePublicFilePath($path);
+
+            if ($absolutePath) {
+                return $absolutePath;
+            }
+
+            $normalizedPath = $this->normalizePublicStoragePath($path);
+
+            if ($normalizedPath && Storage::disk('public')->exists($normalizedPath)) {
+                return Storage::disk('public')->path($normalizedPath);
+            }
+
+            $publicPath = $this->resolvePublicWebFilePath($normalizedPath);
+
+            if ($publicPath) {
+                return $publicPath;
+            }
+
+            $fallbackPath = $this->resolveFallbackPublicStoragePath($normalizedPath, $fallbackDirectories);
+
+            if ($fallbackPath) {
+                return $fallbackPath;
+            }
+        }
+
+        return null;
+    }
+
+    private function decodedFileQuery(Request $request): ?string
+    {
+        $encodedPath = $request->query('file');
+
+        if (!is_string($encodedPath) || $encodedPath === '') {
+            return null;
+        }
+
+        $decodedPath = base64_decode($encodedPath, true);
+
+        return is_string($decodedPath) && $decodedPath !== '' ? $decodedPath : null;
+    }
+
+    private function resolveAbsolutePublicFilePath(string $path): ?string
+    {
+        $urlPath = parse_url(trim($path), PHP_URL_PATH);
+        $path = rawurldecode($urlPath ?: $path);
+
+        if (!str_starts_with($path, '/')) {
+            return null;
+        }
+
+        $realPath = realpath($path);
+        $publicRoot = realpath(Storage::disk('public')->path(''));
+
+        if (!$realPath || !$publicRoot) {
+            return null;
+        }
+
+        $publicRoot = rtrim($publicRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+        return str_starts_with($realPath, $publicRoot) ? $realPath : null;
+    }
+
+    private function normalizePublicStoragePath(string $path): string
+    {
+        $urlPath = parse_url(trim($path), PHP_URL_PATH);
+        $path = $urlPath ?: $path;
+        $path = rawurldecode(str_replace('\\', '/', $path));
+        $path = preg_replace('#/+#', '/', $path);
+        $path = ltrim($path, '/');
+
+        foreach ([
+            'storage/app/public/',
+            'app/public/',
+            'public/storage/',
+            'storage/',
+        ] as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return substr($path, strlen($prefix));
+            }
+        }
+
+        return $path;
+    }
+
+    private function resolvePublicWebFilePath(string $path): ?string
+    {
+        if ($path === '') {
+            return null;
+        }
+
+        $realPath = realpath(public_path($path));
+        $publicRoot = realpath(public_path());
+
+        if (!$realPath || !$publicRoot || !is_file($realPath)) {
+            return null;
+        }
+
+        $publicRoot = rtrim($publicRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+        return str_starts_with($realPath, $publicRoot) ? $realPath : null;
+    }
+
+    private function resolveFallbackPublicStoragePath(string $path, array $directories): ?string
+    {
+        $filename = basename($path);
+
+        if ($filename === '' || $filename === '.' || $filename === '..') {
+            return null;
+        }
+
+        foreach ($directories as $directory) {
+            $candidate = trim($directory, '/') . '/' . $filename;
+
+            if (Storage::disk('public')->exists($candidate)) {
+                return Storage::disk('public')->path($candidate);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -522,5 +969,57 @@ HTML;
 HTML;
 
         return $html;
+    }
+
+    private function applicationRelations(): array
+    {
+        $relations = ['documents', 'payments', 'user'];
+
+        if (Schema::hasTable('application_tasks')) {
+            $relations[] = 'tasks';
+        }
+
+        if (Schema::hasTable('draft_versions')) {
+            $relations[] = 'draftVersions';
+        }
+
+        if (Schema::hasTable('application_status_logs')) {
+            $relations[] = 'statusLogs';
+        }
+
+        return $relations;
+    }
+
+    private function validationMessages(): array
+    {
+        return [
+            'billing_mobile.regex' => 'Enter a valid Indian mobile number.',
+            'applicant_phone.regex' => 'Enter a valid Indian mobile number.',
+            'signatory_phone.regex' => 'Enter a valid Indian mobile number.',
+            'co_applicant_mobile.regex' => 'Enter a valid Indian mobile number.',
+            'applicant_pincode.regex' => 'Enter a valid 6-digit pincode.',
+            'signatory_pincode.regex' => 'Enter a valid 6-digit pincode.',
+            'co_applicant_pincode.regex' => 'Enter a valid 6-digit pincode.',
+            'gst_number.regex' => 'Enter a valid GST number.',
+            'trademark_image.required' => 'Please upload the image of the trademark.',
+            'proof_of_use.required' => 'Please upload proof of use of the trademark.',
+        ];
+    }
+
+    private function normalizeApplicationRelations(Application $application): Application
+    {
+        if (!Schema::hasTable('application_tasks')) {
+            $application->setRelation('tasks', collect());
+        }
+
+        if (!Schema::hasTable('draft_versions')) {
+            $application->setRelation('draftVersions', collect());
+        }
+
+        if (!Schema::hasTable('application_status_logs')) {
+            $application->setRelation('statusLogs', collect());
+        }
+
+        return $application;
     }
 }

@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Mail\WelcomeNotification;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class RegisterController extends Controller
 {
@@ -69,8 +71,15 @@ class RegisterController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
-        // Send welcome email
-        Mail::to($user->email)->send(new WelcomeNotification($user));
+        try {
+            Mail::to($user->email)->send(new WelcomeNotification($user));
+        } catch (Throwable $exception) {
+            Log::warning('Welcome email failed after registration.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return $user;
     }

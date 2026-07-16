@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Legal Bruz ') }} - IPR Registration</title>
+    <title>{{ config('app.name', 'Legal Bruz (LLP)') }} - IPR Registration</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,7 @@
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ asset('css/design-system.css') }}">
 
     <style>
         * {
@@ -64,7 +65,7 @@
         .navbar-brand {
             font-size: 1.6rem;
             font-weight: 900;
-            background: linear-gradient(135deg, var(--navy) 0%, var(--emerald) 100%);
+            background: #fff;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -96,6 +97,25 @@
         .btn-nav-logout:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(42, 157, 143, 0.3);
+        }
+
+        /* Responsive Logo Styling */
+        .navbar-logo {
+            height: 76px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-logo {
+                height: 64px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-logo {
+                height: 54px;
+            }
         }
 
         /* ============ MAIN CONTENT ============ */
@@ -527,7 +547,7 @@
             }
         }
     </style>
-      <style>
+    <style>
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -540,17 +560,49 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/mobile-typography.css') }}">
 </head>
 
 <body>
     <div id="app">
         <!-- ============ NAVBAR ============ -->
-        @if (Auth::guard('admin')->check())
+        @if (request()->is('admin*') && Auth::guard('admin')->check())
             <!-- Admin Header -->
             @include('components.admin-header')
-        @else
-            <!-- User Header -->
+        @elseif (Auth::check())
+            <!-- Authenticated User Header -->
             @include('components.user-header')
+        @else
+            <!-- Guest Header -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+                <div class="container">
+                    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ route('landing') }}"
+                        style="font-size: 1.5rem; color: #1D3557;">
+                        <img src="{{ asset('logo.png') }}" alt="Legal Bruz (LLP) logo" class="navbar-logo">
+
+                    </a>
+
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#guestNavbar" aria-controls="guestNavbar" aria-expanded="false"
+                        aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="guestNavbar">
+                        <ul class="navbar-nav ms-auto align-items-center gap-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('landing') }}">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('login') }}">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-nav-logout" href="{{ route('register') }}">Sign Up</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
         @endif
 
         <!-- ============ MAIN CONTENT ============ -->
@@ -561,7 +613,7 @@
         <!-- ============ FOOTER ============ -->
         <footer>
             <div class="container">
-                <p>&copy; 2026 Legal Bruz . All rights reserved. | <a href="#"
+                <p>&copy; 2026 Legal Bruz (LLP). All rights reserved. | <a href="#"
                         style="color: var(--emerald); text-decoration: none;">Privacy Policy</a> | <a href="#"
                         style="color: var(--emerald); text-decoration: none;">Terms</a></p>
             </div>
@@ -569,7 +621,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Add smooth transitions
         document.addEventListener('DOMContentLoaded', function() {
@@ -590,8 +643,8 @@
             });
         });
     </script>
-  
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @include('partials.button-loading')
+    @include('partials.sweet-alert-confirmations')
 </body>
 
 </html>

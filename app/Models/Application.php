@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\TrademarkOppositionCase;
+use App\Support\TrademarkWorkflow;
 
 class Application extends Model
 {
@@ -28,6 +30,7 @@ class Application extends Model
         'currently_selling',
         'website',
         'status',
+        'admin_review_note',
         'trademark_status',
         'rejection_reason',
         'filed_at',
@@ -36,6 +39,25 @@ class Application extends Model
         'goods_services',
         'usage',
         'members_details',
+        'service_status',
+        'registry_status',
+        'workflow_meta',
+        'opposition_application_id',
+        'opposition_status',
+        'opposition_defence_case_id',
+        'opposition_defence_status',
+        'final_opposition_result',
+        'current_stage_started_at',
+        'approved_at',
+        'onboarding_completed_at',
+        'kyc_verified_at',
+        'strategy_completed_at',
+        'draft_ready_at',
+        'client_approved_at',
+        'final_payment_completed_at',
+        'post_filing_started_at',
+        'filing_receipt_path',
+        'assigned_admin_id',
     ];
 
     protected $casts = [
@@ -45,6 +67,18 @@ class Application extends Model
         'currently_selling' => 'boolean',
         'classes' => 'array',
         'members_details' => 'array',
+        'workflow_meta' => 'array',
+        'opposition_application_id' => 'integer',
+        'opposition_defence_case_id' => 'integer',
+        'current_stage_started_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'onboarding_completed_at' => 'datetime',
+        'kyc_verified_at' => 'datetime',
+        'strategy_completed_at' => 'datetime',
+        'draft_ready_at' => 'datetime',
+        'client_approved_at' => 'datetime',
+        'final_payment_completed_at' => 'datetime',
+        'post_filing_started_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -60,5 +94,40 @@ class Application extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ApplicationTask::class);
+    }
+
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(ApplicationStatusLog::class);
+    }
+
+    public function draftVersions(): HasMany
+    {
+        return $this->hasMany(DraftVersion::class);
+    }
+
+    public function oppositionApplication(): BelongsTo
+    {
+        return $this->belongsTo(TrademarkOppositionCase::class, 'opposition_application_id');
+    }
+
+    public function oppositionDefenceCase(): BelongsTo
+    {
+        return $this->belongsTo(TrademarkOppositionCase::class, 'opposition_defence_case_id');
+    }
+
+    public function getCurrentStatusAttribute(): string
+    {
+        return $this->service_status ?: $this->status ?: TrademarkWorkflow::DRAFT;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return TrademarkWorkflow::label($this->current_status);
     }
 }

@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Legal Bruz') }} - Admin Login</title>
+    <title>{{ config('app.name', 'Legal Bruz (LLP)') }} - Admin Login</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,6 +63,7 @@
             border-color: var(--emerald);
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/mobile-typography.css') }}">
 </head>
 
 <body>
@@ -73,6 +74,8 @@
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+    @include('partials.button-loading')
 
     @stack('scripts')
 </body>

@@ -3,12 +3,13 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class DocumentVerifiedNotification extends Mailable
 {
@@ -35,6 +36,22 @@ class DocumentVerifiedNotification extends Mailable
 
     public function attachments(): array
     {
-        return [];
+        return $this->documentAttachment();
+    }
+
+    private function documentAttachment(): array
+    {
+        if (!$this->document->file_path || !Storage::disk('public')->exists($this->document->file_path)) {
+            return [];
+        }
+
+        $attachment = Attachment::fromStorageDisk('public', $this->document->file_path)
+            ->as($this->document->file_name ?: basename($this->document->file_path));
+
+        if (($this->document->file_type ?? null) === 'html') {
+            $attachment = $attachment->withMime('text/html');
+        }
+
+        return [$attachment];
     }
 }

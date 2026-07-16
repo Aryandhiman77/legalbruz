@@ -14,24 +14,6 @@ class DocumentGenerator
      */
     public static function generateAffidavit(Application $application)
     {
-        $appNumber = $application->application_number ?? 'TM-' . now()->format('Y') . '-' . $application->id;
-        $date = now()->format('d.m.Y');
-
-        $classes = self::formatClasses($application->classes ?? '');
-
-        $applicantName = $application->applicant_name ?? 'N/A';
-        $brandName = $application->brand_name ?? 'N/A';
-        $industry = $application->industry ?? 'business';
-        $description = $application->description ?? 'business';
-        $entityType = $application->entity_type ?? 'individual';
-
-        // Get from database instead of guessing
-        $address = $application->address ?? '____________________________';
-        $gender = $application->gender ?? '________';
-        $nationality = $application->nationality ?? 'Indian';
-        $designation = self::getDesignation($entityType);
-
-        // Create document record first to get ID
         $document = Document::create([
             'application_id' => $application->id,
             'user_id' => $application->user_id ?? 1,
@@ -43,34 +25,49 @@ class DocumentGenerator
             'status' => 'generated',
         ]);
 
-        // Generate HTML with document ID embedded
-        $affidavitContent = self::createAffidavitHTML(
-            $appNumber,
-            $date,
-            $applicantName,
-            $brandName,
-            $industry,
-            $classes,
-            $description,
-            $address,
-            $designation,
-            $gender,
-            $nationality,
-            $document->id,
-            $application->members_details
-        );
-
-        // Update file path and save
+        $affidavitContent = self::createKycAffidavitHtml($application);
         $filename = 'affidavit-' . $application->id . '-' . $document->id . '.html';
         $path = 'documents/affidavits/' . $filename;
 
         Storage::disk('public')->put($path, $affidavitContent);
 
-        // Update document with actual path
         $document->update([
             'file_path' => $path,
             'file_name' => $filename,
             'file_size' => strlen($affidavitContent),
+            'verification_notes' => 'Affidavit generated for user review and signature.',
+        ]);
+
+        return $document;
+    }
+
+    public static function generateSignedAffidavit(Application $application, string $signatureText, ?string $notes = null): Document
+    {
+        $signatureText = trim($signatureText);
+
+        $document = Document::create([
+            'application_id' => $application->id,
+            'user_id' => $application->user_id ?? 1,
+            'document_type' => 'affidavit (Signed)',
+            'file_path' => 'temp',
+            'file_name' => 'affidavit-signed-temp.html',
+            'file_type' => 'html',
+            'file_size' => 0,
+            'status' => 'uploaded',
+            'verification_notes' => $notes ?: 'Signed affidavit submitted by user.',
+        ]);
+
+        $affidavitContent = self::createKycAffidavitHtml($application, $signatureText, now()->format('d.m.Y'));
+        $filename = 'affidavit-signed-' . $application->id . '-' . $document->id . '.html';
+        $path = 'documents/affidavits/' . $filename;
+
+        Storage::disk('public')->put($path, $affidavitContent);
+
+        $document->update([
+            'file_path' => $path,
+            'file_name' => $filename,
+            'file_size' => strlen($affidavitContent),
+            'verification_notes' => 'Digitally signed by user: ' . $signatureText . ($notes ? ' Notes: ' . $notes : ''),
         ]);
 
         return $document;
@@ -182,6 +179,199 @@ class DocumentGenerator
         return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     }
 
+    private static function createKycAffidavitHtml(Application $application, ?string $signatureText = null, ?string $signedOn = null): string
+    {
+        $details = $application->members_details ?? [];
+        $trademarkDetails = $details['trademark_details'] ?? [];
+        $applicantDetails = $details['trademark_applicant_details'] ?? [];
+
+        $applicantName = self::e($application->applicant_name ?: ($applicantDetails['applicant_name'] ?? 'N/A'));
+        $brandName = self::e($application->brand_name ?: ($trademarkDetails['mark_brand_in_words'] ?? 'N/A'));
+        $usageStatus = (string) ($application->usage ?: ($trademarkDetails['user_date_or_proposed'] ?? 'proposed'));
+        $firstUseDate = $application->first_use_date?->format('d M Y') ?: ($trademarkDetails['trademark_use_date'] ?? null);
+        $goodsServices = self::e($application->goods_services ?: ($trademarkDetails['goods_or_services'] ?? 'Not specified'));
+        $address = self::e($application->address ?: self::buildApplicantAddress($applicantDetails));
+        $usageLine = $usageStatus === 'used'
+            ? 'The mark is being used in relation to the stated goods/services.'
+            : 'The mark is proposed to be used in relation to the stated goods/services.';
+        $firstUseLine = $usageStatus === 'used' && $firstUseDate
+            ? 'Date of first use: ' . self::e($firstUseDate) . '.'
+            : 'Date of first use: Not applicable because the mark is proposed to be used.';
+        $signatureBlock = $signatureText
+            ? '<div class="signed-name">' . self::e($signatureText) . '</div><div class="signed-meta">Digitally signed on ' . self::e($signedOn ?? now()->format('d M Y')) . '</div>'
+            : '<div class="signature-placeholder">Type-based digital signature will appear here after user submission.</div>';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trademark Affidavit - {$brandName}</title>
+    <style>
+        @page {
+            margin: 32px 36px;
+        }
+
+        body {
+            margin: 0;
+            background: #efefef;
+            color: #111;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 15px;
+            line-height: 1.65;
+        }
+
+        .page {
+            width: 794px;
+            min-height: 1123px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 40px 48px 56px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .stamp-space {
+            height: 360px;
+            position: relative;
+        }
+
+        .stamp-note {
+            position: absolute;
+            top: 12px;
+            left: 0;
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            color: #7a7a7a;
+            text-transform: uppercase;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            margin-bottom: 26px;
+        }
+
+        p {
+            margin: 0 0 18px;
+            text-align: justify;
+        }
+
+        .facts {
+            margin: 18px 0 24px 0;
+        }
+
+        .facts p {
+            margin-bottom: 12px;
+        }
+
+        .signature-zone {
+            margin-top: 56px;
+        }
+
+        .signature-label {
+            font-weight: 700;
+            margin-bottom: 44px;
+        }
+
+        .signed-name,
+        .signature-placeholder {
+            display: inline-block;
+            min-width: 280px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 6px;
+        }
+
+        .signed-name {
+            font-size: 18px;
+            font-family: "Times New Roman", Times, serif;
+            font-style: normal;
+            font-weight: 400;
+        }
+
+        .signature-placeholder {
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            color: #666;
+        }
+
+        .signed-meta {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+            font-family: Arial, sans-serif;
+        }
+
+        .signatory-name {
+            margin-top: 12px;
+            font-weight: 700;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+
+            .page {
+                width: auto;
+                min-height: auto;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="stamp-space">
+            <div class="stamp-note">Reserved blank area for Indian stamp paper</div>
+        </div>
+
+        <div class="title">AFFIDAVIT</div>
+
+        <p>
+            I, <strong>{$applicantName}</strong>, having address at <strong>{$address}</strong>, do hereby solemnly affirm and state that I am the applicant / authorised representative in relation to the trademark <strong>{$brandName}</strong>.
+        </p>
+
+        <div class="facts">
+            <p><strong>Applicant Name:</strong> {$applicantName}</p>
+            <p><strong>Trademark Name:</strong> {$brandName}</p>
+            <p><strong>Goods / Services:</strong> {$goodsServices}</p>
+            <p><strong>Use Statement:</strong> {$usageLine}</p>
+            <p><strong>{$firstUseLine}</strong></p>
+        </div>
+
+        <p>
+            I declare that all details provided in this affidavit and in the trademark application are true and correct to the best of my knowledge and belief, and that nothing material has been concealed therefrom.
+        </p>
+
+        <div class="signature-zone">
+            <div class="signature-label">DEPONENT</div>
+            {$signatureBlock}
+            <div class="signatory-name">{$applicantName}</div>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    private static function buildApplicantAddress(array $applicantDetails): string
+    {
+        $parts = array_filter([
+            $applicantDetails['address_of_applicant'] ?? null,
+            $applicantDetails['district'] ?? null,
+            $applicantDetails['state'] ?? null,
+            $applicantDetails['pin_code'] ?? null,
+        ], fn ($value) => filled($value));
+
+        return implode(', ', $parts) ?: 'Address not available';
+    }
+
     /**
      * Common editable wrapper with data attribute for tracking
      */
@@ -259,6 +449,29 @@ class DocumentGenerator
         .toolbar button.save-btn:hover {
             background: #28a745;
             color: white;
+        }
+
+        .toolbar button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .button-spinner {
+            display: inline-block;
+            width: 0.9em;
+            height: 0.9em;
+            margin-right: 6px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            vertical-align: -0.12em;
+            animation: button-spin 0.7s linear infinite;
+        }
+
+        @keyframes button-spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .toolbar button.danger {
@@ -502,6 +715,10 @@ class DocumentGenerator
             const content = pageElement.innerHTML;
 
             const status = document.getElementById('status');
+            const saveBtn = document.getElementById('saveBtn');
+            const originalSaveHtml = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="button-spinner"></span>Saving...';
 
             try {
                 const response = await fetch('/documents/save-edited', {
@@ -538,6 +755,9 @@ class DocumentGenerator
                 status.textContent = '✗ Save failed';
                 status.className = 'status';
                 status.style.display = 'block';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalSaveHtml;
             }
         }
 

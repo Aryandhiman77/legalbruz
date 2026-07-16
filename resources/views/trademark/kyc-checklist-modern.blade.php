@@ -1,6 +1,11 @@
 @extends('layouts.app-modern')
 
 @section('content')
+<style>
+    .checklist-item:hover{
+        border-color:#e8e8ee!important;
+    }
+</style>
     <div class="container">
         <!-- Progress Bar -->
         <div class="progress-section">

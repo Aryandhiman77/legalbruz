@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
+use App\Models\DiscountCoupon;
 use App\Models\Payment;
+use App\Services\TrademarkWorkflowService;
+use App\Support\TrademarkWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
 {
@@ -20,14 +24,36 @@ class PaymentController extends Controller
             abort(403);
         }
 
-        $totalAmount = 10; // ₹5000 total, 50% advance = ₹2500
+        $originalTotalAmount = $application->entity_type === 'individual' ? 7000 : 9000;
+        $autoApplyCoupon = DiscountCoupon::autoApplyForPayment('trademark_filing', Auth::id());
+        $totalAmount = $autoApplyCoupon
+            ? $autoApplyCoupon->discountedAmountFor($originalTotalAmount)
+            : $originalTotalAmount;
         $advanceAmount = round($totalAmount * 0.50);
+        $paidServiceQuery = $application->payments()->whereIn('status', ['completed', 'approved']);
+
+        if ($this->hasPaymentsColumn('payment_type')) {
+            $paidServiceQuery->whereIn('payment_type', ['advance', 'full']);
+        }
+
+        $paidServiceAmount = (float) $paidServiceQuery->sum('amount');
+        $finalAmount = max($totalAmount - $paidServiceAmount, 0);
+        $paymentType = $application->current_status === TrademarkWorkflow::PAYMENT_PENDING_FINAL ? 'final' : 'advance';
+
+        if ($paymentType === 'final' && $finalAmount <= 0) {
+            return redirect()->route('trademark.status', $application->id)
+                ->with('info', 'Your final balance is already paid.');
+        }
 
         return view('payments.razorpay-form', [
             'application' => $application,
             'totalAmount' => $totalAmount,
-            'advanceAmount' => $advanceAmount,
+            'originalTotalAmount' => $originalTotalAmount,
+            'advanceAmount' => $paymentType === 'advance' ? $advanceAmount : $finalAmount,
+            'paymentType' => $paymentType,
             'razorpayKeyId' => config('razorpay.key_id'),
+            'paymentCoupons' => DiscountCoupon::availableForPayment('trademark_filing', Auth::id()),
+            'autoApplyCoupon' => $autoApplyCoupon,
         ]);
     }
 
@@ -48,7 +74,7 @@ class PaymentController extends Controller
 
         $validated = $request->validate([
             'amount' => "required|numeric|min:$minAmount|max:$maxAmount",
-            'payment_type' => 'required|in:advance,full,custom',
+            'payment_type' => 'required|in:advance,final,full,custom',
         ]);
 
         try {
@@ -83,16 +109,27 @@ class PaymentController extends Controller
             $order = json_decode($response, true);
 
             // Save payment record with pending status
-            $payment = Payment::create([
+            $normalizedPaymentType = match ($validated['payment_type']) {
+                'final' => 'final',
+                'full' => 'full',
+                default => 'advance',
+            };
+            $paymentData = [
                 'application_id' => $applicationId,
                 'user_id' => Auth::id(),
                 'amount' => $validated['amount'],
-                'total_amount' => $validated['payment_type'] === 'full' ? $validated['amount'] : 5000,
-                'percentage' => $validated['payment_type'] === 'advance' ? '50%' : '100%',
+                'total_amount' => $application->entity_type === 'individual' ? 7000 : 9000,
+                'percentage' => $normalizedPaymentType === 'advance' ? '50%' : '100%',
                 'payment_method' => 'razorpay',
                 'status' => 'pending',
                 'reference_number' => $order['id'],
-            ]);
+            ];
+
+            if ($this->hasPaymentsColumn('payment_type')) {
+                $paymentData['payment_type'] = $normalizedPaymentType;
+            }
+
+            $payment = Payment::create($paymentData);
 
             return response()->json([
                 'status' => 'success',
@@ -115,7 +152,7 @@ class PaymentController extends Controller
     /**
      * Verify Razorpay payment signature
      */
-    public function verifySignature(Request $request, $applicationId)
+    public function verifySignature(Request $request, $applicationId, TrademarkWorkflowService $workflow)
     {
         $application = Application::findOrFail($applicationId);
 
@@ -156,14 +193,21 @@ class PaymentController extends Controller
                 'transaction_id' => $paymentId,
             ]);
 
-            // Update application status
-            $application->update(['status' => 'payment_completed']);
+            $paymentType = $this->paymentType($payment);
+
+            if ($paymentType === 'final') {
+                $workflow->markFinalPaymentComplete($application);
+            } else {
+                $workflow->markAdvancePaymentComplete($application);
+            }
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Payment verified successfully',
+                'message' => $paymentType === 'final'
+                    ? 'Final payment verified successfully.'
+                    : 'Payment verified successfully. Your application has been sent for admin review.',
                 'payment_id' => $payment->id,
-                'redirect_url' => route('documents.download-page', $application->id),
+                'redirect_url' => route('trademark.status', $application->id),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -184,7 +228,7 @@ class PaymentController extends Controller
             abort(403);
         }
 
-        $payment = $application->payments()->where('status', 'completed')->first();
+        $payment = $application->payments()->where('status', 'completed')->latest('id')->first();
 
         return response()->json([
             'paid' => $payment ? true : false,
@@ -213,5 +257,76 @@ class PaymentController extends Controller
     {
         $payments = Auth::user()->payments()->with('application')->latest()->get();
         return view('payments.history', ['payments' => $payments]);
+    }
+
+    public function viewInvoice(Payment $payment)
+    {
+        if ($payment->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if (!in_array(strtolower((string) $payment->status), ['completed', 'approved'], true)) {
+            abort(404);
+        }
+
+        $application = $payment->application;
+
+        $pdf = \PDF::loadView('emails.attachments.invoice', [
+            'application' => $application,
+            'user' => $payment->user,
+            'payment' => $payment,
+            'invoiceNumber' => $this->invoiceNumber($payment),
+            'paymentLabel' => $this->paymentLabel($payment),
+            'issuedAt' => $payment->paid_at ?? $payment->created_at,
+            'firmName' => config('app.name', 'Legal Bruz'),
+            'firmEmail' => config('mail.from.address'),
+        ])->setPaper('a4');
+
+        return $pdf->stream('invoice-' . $application->id . '-' . $payment->id . '.pdf');
+    }
+
+    private function hasPaymentsColumn(string $column): bool
+    {
+        return Schema::hasColumn('payments', $column);
+    }
+
+    private function paymentType(Payment $payment): string
+    {
+        if ($this->hasPaymentsColumn('payment_type') && filled($payment->payment_type)) {
+            return $payment->payment_type;
+        }
+
+        return (string) $payment->percentage === '100%' ? 'final' : 'advance';
+    }
+
+    private function paymentLabel(Payment $payment): string
+    {
+        return match ($this->paymentKind($payment)) {
+            'full' => 'Full Payment',
+            'final' => 'Final Payment',
+            default => 'Advance Payment (50%)',
+        };
+    }
+
+    private function paymentKind(Payment $payment): string
+    {
+        $paymentType = strtolower((string) ($payment->payment_type ?? ''));
+
+        if (in_array($paymentType, ['advance', 'final', 'full'], true)) {
+            return $paymentType;
+        }
+
+        if ((float) $payment->amount >= (float) $payment->total_amount && (float) $payment->total_amount > 0) {
+            return 'full';
+        }
+
+        return (string) $payment->percentage === '100%' ? 'final' : 'advance';
+    }
+
+    private function invoiceNumber(Payment $payment): string
+    {
+        $issuedAt = $payment->paid_at ?? $payment->created_at ?? now();
+
+        return 'INV-' . $issuedAt->format('Y') . '-' . $payment->application_id . '-' . $payment->id;
     }
 }

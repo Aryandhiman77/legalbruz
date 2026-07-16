@@ -46,6 +46,7 @@
                                     <th style="color: #1D3557; font-weight: 600;">Trademark</th>
                                     <th style="color: #1D3557; font-weight: 600;">Email</th>
                                     <th style="color: #1D3557; font-weight: 600;">Submitted</th>
+                                    <th style="color: #1D3557; font-weight: 600;">Stage</th>
                                     <th style="color: #1D3557; font-weight: 600;">Action</th>
                                 </tr>
                             </thead>
@@ -68,6 +69,14 @@
                                         </td>
                                         <td>
                                             <small>{{ $app->created_at->format('M d, Y') }}</small>
+                                        </td>
+                                        <td>
+                                            @php
+                                                $adminStatusLabel = ($app->registry_status === \App\Support\TrademarkWorkflow::REGISTRY_REGISTERED || filled($app->registered_at))
+                                                    ? 'Registered'
+                                                    : $app->status_label;
+                                            @endphp
+                                            <span class="badge bg-light text-dark border">{{ $adminStatusLabel }}</span>
                                         </td>
                                         <td>
                                             <a href="{{ route('admin.review-application', $app->id) }}"
