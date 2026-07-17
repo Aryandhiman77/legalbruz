@@ -22,26 +22,44 @@ class GeminiTrademarkInsightServiceTest extends TestCase
         ]);
     }
 
-    public function test_valid_structured_output_is_added_without_changing_numeric_analysis(): void
+    public function test_gemini_explains_without_changing_scores_counts_or_factors(): void
     {
         Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->geminiResponse(), 200)]);
         $payload = $this->payload();
-        $expected = (new TrademarkProbabilityService)->analyze('Amazon', $payload['data'], null);
+        $expected = (new TrademarkProbabilityService)->analyze('Amazon', $payload['data'], [
+            'source_type' => 'third_party',
+        ]);
 
         $response = $this->postJson(route('trademark.ai-probability'), $payload)->assertOk();
 
         $response->assertJsonPath('analysis.ai_insights.generated_by', 'gemini')
-            ->assertJsonPath('analysis.ai_insights.summary', 'Select the proposed trademark class to calculate a class-specific registration estimate.')
-            ->assertJsonPath('analysis.ai_insights.reasons.0.title', 'Exact name evidence')
-            ->assertJsonPath('analysis.ai_insights.warnings.0.title', 'Trademark class required')
+            ->assertJsonPath('analysis.ai_insights.summary', 'The supplied search result has substantial earlier-mark conflict evidence.')
             ->assertJsonPath('analysis.registration_probability', $expected['registration_probability'])
             ->assertJsonPath('analysis.conflict_risk', $expected['conflict_risk'])
+            ->assertJsonPath('analysis.risk_level', $expected['risk_level'])
+            ->assertJsonPath('analysis.exact_active_word_marks', $expected['exact_active_word_marks'])
             ->assertJsonPath('analysis.factors', $expected['factors']);
-
         $this->assertStringNotContainsString('test-secret-key', $response->getContent());
     }
 
-    public function test_missing_api_key_uses_fallback_output(): void
+    public function test_request_tells_gemini_numeric_values_are_fixed_and_sends_all_factors(): void
+    {
+        Http::fake(['*' => Http::response($this->geminiResponse(), 200)]);
+
+        $this->service()->generate($this->analysis(), $this->records());
+
+        Http::assertSent(function (Request $request): bool {
+            $system = $request->data()['system_instruction']['parts'][0]['text'];
+            $input = json_decode($request->data()['contents'][0]['parts'][0]['text'], true);
+
+            return str_contains($system, 'numeric score and all counts have already been calculated by Laravel')
+                && count($input['calculated_result']['factors']) === 6
+                && array_key_exists('confidence_score', $input['calculated_result'])
+                && count($input['relevant_records']) <= 10;
+        });
+    }
+
+    public function test_missing_key_uses_local_fallback_without_http_request(): void
     {
         config(['services.gemini.api_key' => null]);
         Http::fake();
@@ -49,130 +67,90 @@ class GeminiTrademarkInsightServiceTest extends TestCase
         $insights = $this->service()->generate($this->analysis(), $this->records());
 
         $this->assertSame('fallback', $insights['generated_by']);
+        $this->assertNotEmpty($insights['reasons']);
         Http::assertNothingSent();
     }
 
-    public function test_timeout_uses_fallback_output(): void
+    public function test_timeout_and_invalid_json_use_fallback_without_losing_analysis(): void
     {
         Http::fake(['*' => Http::failedConnection('timeout')]);
+        $timeout = $this->service()->generate($this->analysis(), $this->records());
+        $this->assertSame('fallback', $timeout['generated_by']);
 
-        $insights = $this->service()->generate($this->analysis(), $this->records());
-
-        $this->assertSame('fallback', $insights['generated_by']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['candidates' => [['content' => ['parts' => [['text' => '{bad']]]]]], 200)]);
+        $invalid = $this->service()->generate($this->analysis(), $this->records());
+        $this->assertSame('fallback', $invalid['generated_by']);
     }
 
-    public function test_rate_limit_response_uses_fallback_output(): void
-    {
-        Http::fake(['*' => Http::response([], 429)]);
-
-        $insights = $this->service()->generate($this->analysis(), $this->records());
-
-        $this->assertSame('fallback', $insights['generated_by']);
-    }
-
-    public function test_broken_json_uses_fallback_output(): void
-    {
-        Http::fake(['*' => Http::response([
-            'candidates' => [['content' => ['parts' => [['text' => '{broken']]]]],
-        ])]);
-
-        $insights = $this->service()->generate($this->analysis(), $this->records());
-
-        $this->assertSame('fallback', $insights['generated_by']);
-    }
-
-    public function test_no_selected_class_creates_an_actionable_warning(): void
+    public function test_zero_results_have_useful_fallback_reason_and_warning(): void
     {
         config(['services.gemini.enabled' => false]);
+        $analysis = (new TrademarkProbabilityService)->analyze('NewBrand', []);
+
+        $insights = $this->service()->generate($analysis, []);
+
+        $this->assertSame('No matching record found', $insights['reasons'][0]['title']);
+        $this->assertSame('Search estimate only', $insights['warnings'][0]['title']);
+        $this->assertStringNotContainsString('guarantee', strtolower($insights['summary']));
+    }
+
+    public function test_exact_word_device_and_similar_fallback_reasons_are_specific(): void
+    {
+        config(['services.gemini.enabled' => false]);
+        $records = [
+            $this->record('1', 'Amazon', 'Registered', 'Word'),
+            $this->record('2', 'Amazon', 'Accepted', 'Device'),
+            $this->record('3', 'Amazone', 'Registered', 'Word'),
+        ];
+        $insights = $this->service()->generate((new TrademarkProbabilityService)->analyze('Amazon', $records), $records);
+        $titles = array_column($insights['reasons'], 'title');
+
+        $this->assertContains('Exact active Word marks', $titles);
+        $this->assertContains('Exact active Device marks', $titles);
+        $this->assertContains('Similar active names', $titles);
+    }
+
+    public function test_class_selection_or_internal_scraper_language_is_rejected(): void
+    {
+        Http::fake(['*' => Http::response($this->geminiResponse(
+            summary: 'Choose a trademark class because the scraped data may be malformed.'
+        ), 200)]);
 
         $insights = $this->service()->generate($this->analysis(), $this->records());
+        $encoded = strtolower(json_encode($insights));
 
-        $this->assertSame('Trademark class required', $insights['warnings'][0]['title']);
-        $this->assertNotEmpty($insights['warnings'][0]['action']);
+        $this->assertSame('fallback', $insights['generated_by']);
+        $this->assertStringNotContainsString('scrap', $encoded);
+        $this->assertStringNotContainsString('malformed', $encoded);
+        $this->assertStringNotContainsString('choose a trademark class', $encoded);
     }
 
-    public function test_selected_class_does_not_create_no_class_warning(): void
+    public function test_relevant_records_are_deduplicated_limited_and_sensitive_urls_are_not_sent(): void
     {
-        config(['services.gemini.enabled' => false]);
-        $analysis = $this->analysis('45');
-
-        $insights = $this->service()->generate($analysis, $this->records());
-
-        $this->assertSame([], $insights['warnings']);
-    }
-
-    public function test_internal_cleaning_never_creates_a_user_warning(): void
-    {
-        config(['services.gemini.enabled' => false]);
-        $records = $this->records();
-        $records[0]['description'] = 'View All Results Search by Proprietor Name Upgrade ₹';
-        $analysis = (new TrademarkProbabilityService)->analyze('Amazon', $records, '45', 'Personal and social services');
-
-        $insights = $this->service()->generate($analysis, $records);
-        $json = json_encode($insights);
-
-        $this->assertSame([], $analysis['warnings']);
-        $this->assertStringNotContainsString('scraped data', strtolower($json));
-        $this->assertStringNotContainsString('malformed scraped data', strtolower($json));
-    }
-
-    public function test_relevant_matches_are_limited_and_sensitive_fields_are_not_sent(): void
-    {
-        Http::fake(['*' => Http::response($this->geminiResponse(warnings: []), 200)]);
+        Http::fake(['*' => Http::response($this->geminiResponse(), 200)]);
         $records = [];
         for ($index = 1; $index <= 15; $index++) {
             $records[] = [
-                'application_id' => (string) $index,
-                'trademark_name' => "Amazon {$index}",
-                'status' => 'Registered',
-                'class' => '45',
-                'type' => 'Word',
-                'proprietor' => 'Example Owner',
-                'description' => str_repeat('Service ', 100),
+                ...$this->record((string) $index, "Amazon {$index}"),
                 'image_url' => 'https://private.example/image.png',
                 'source_url' => 'https://private.example/source',
             ];
         }
-        $analysis = (new TrademarkProbabilityService)->analyze('Amazon', $records, '45');
+        $records[] = $records[0];
+        $analysis = (new TrademarkProbabilityService)->analyze('Amazon', $records);
 
         $this->service()->generate($analysis, $records);
 
         Http::assertSent(function (Request $request): bool {
             $input = json_decode($request->data()['contents'][0]['parts'][0]['text'], true);
-            $matches = $input['relevant_matches'];
             $encoded = json_encode($request->data());
 
-            return count($matches) === 10
-                && mb_strlen($matches[0]['description']) <= 300
+            return count($input['relevant_records']) === 10
                 && ! str_contains($encoded, 'image_url')
                 && ! str_contains($encoded, 'source_url')
                 && ! str_contains($encoded, 'private.example');
         });
-    }
-
-    public function test_valid_empty_warnings_are_preserved_for_frontend_hiding(): void
-    {
-        Http::fake(['*' => Http::response($this->geminiResponse(warnings: []), 200)]);
-
-        $insights = $this->service()->generate($this->analysis('45'), $this->records());
-
-        $this->assertSame('gemini', $insights['generated_by']);
-        $this->assertSame([], $insights['warnings']);
-    }
-
-    public function test_gemini_output_cannot_soften_or_overwrite_a_hard_conflict(): void
-    {
-        Http::fake(['*' => Http::response($this->geminiResponse(warnings: []), 200)]);
-        $analysis = $this->analysis('45');
-
-        $insights = $this->service()->generate($analysis, $this->records());
-
-        $this->assertSame(99, $analysis['conflict_risk']);
-        $this->assertSame(1, $analysis['registration_probability']);
-        $this->assertTrue($analysis['hard_conflict']);
-        $this->assertStringContainsString('major registration obstacle', $insights['summary']);
-        $this->assertSame('Exact same-class conflict', $insights['reasons'][0]['title']);
-        $this->assertNotContains('positive', array_column($insights['reasons'], 'impact'));
     }
 
     private function service(): GeminiTrademarkInsightService
@@ -181,49 +159,51 @@ class GeminiTrademarkInsightServiceTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function analysis(?string $class = null): array
+    private function analysis(): array
     {
-        return (new TrademarkProbabilityService)->analyze(
-            'Amazon',
-            $this->records(),
-            $class,
-            $class === null ? null : 'Personal and social services',
-        );
+        return (new TrademarkProbabilityService)->analyze('Amazon', $this->records());
     }
 
     /** @return array<string, mixed> */
     private function payload(): array
     {
-        return ['keyword' => 'Amazon', 'class' => null, 'data' => $this->records()];
+        return ['keyword' => 'Amazon', 'source_type' => 'third_party', 'data' => $this->records()];
     }
 
     /** @return array<int, array<string, mixed>> */
     private function records(): array
     {
-        return [[
-            'application_id' => '2640730',
-            'trademark_name' => 'Amazon',
-            'status' => 'Registered',
-            'class' => '45',
-            'type' => 'Word',
-            'proprietor' => 'Amazon Technologies Inc',
-            'description' => 'Personal and social services',
-        ]];
+        return [$this->record('2640730', 'Amazon')];
     }
 
     /** @return array<string, mixed> */
-    private function geminiResponse(?array $warnings = null): array
+    private function record(string $id, string $name, string $status = 'Registered', string $type = 'Word'): array
+    {
+        return [
+            'application_id' => $id,
+            'trademark_name' => $name,
+            'status' => $status,
+            'class' => '45',
+            'type' => $type,
+            'proprietor' => 'Example Owner',
+            'description' => 'Example services',
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function geminiResponse(string $summary = 'The supplied search result has substantial earlier-mark conflict evidence.'): array
     {
         $output = [
-            'summary' => 'The fixed result shows a measured level of conflict risk.',
-            'reasons' => [
-                ['title' => 'Exact name evidence', 'detail' => 'The supplied result includes an exact active mark.', 'impact' => 'negative'],
-                ['title' => 'Fixed score', 'detail' => 'The application calculated the displayed risk from the matching records.', 'impact' => 'neutral'],
-            ],
-            'warnings' => $warnings ?? [[
-                'title' => 'Choose a class',
-                'detail' => 'A class was not selected for this analysis.',
-                'action' => 'Select the class related to the intended goods or services.',
+            'summary' => $summary,
+            'reasons' => [[
+                'title' => 'Exact name evidence',
+                'detail' => 'The supplied result includes an exact active Word mark.',
+                'impact' => 'negative',
+            ]],
+            'warnings' => [[
+                'title' => 'Search estimate only',
+                'detail' => 'The supplied result is an automated search estimate.',
+                'action' => 'Consider a professional review before filing.',
             ]],
         ];
 

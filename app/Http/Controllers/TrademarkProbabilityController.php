@@ -18,11 +18,15 @@ class TrademarkProbabilityController extends Controller
     public function __invoke(TrademarkProbabilityRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $options = [
+            'source_type' => $validated['source_type'] ?? 'third_party',
+            'gemini_model' => (string) config('services.gemini.model'),
+            'insight_schema_version' => GeminiTrademarkInsightService::SCHEMA_VERSION,
+        ];
         $cacheKey = $this->probabilityService->cacheKey(
             $validated['keyword'],
-            $validated['class'] ?? null,
             $validated['data'],
-            $validated['proposed_description'] ?? null,
+            $options,
         );
 
         $analysis = Cache::remember(
@@ -31,8 +35,7 @@ class TrademarkProbabilityController extends Controller
             fn (): array => $this->probabilityService->analyze(
                 $validated['keyword'],
                 $validated['data'],
-                $validated['class'] ?? null,
-                $validated['proposed_description'] ?? null,
+                $options,
             ),
         );
         $analysis['ai_insights'] = $this->insightService->generate($analysis, $validated['data']);

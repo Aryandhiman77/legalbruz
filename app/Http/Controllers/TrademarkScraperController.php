@@ -19,8 +19,8 @@ class TrademarkScraperController extends Controller
 
         if (count($results) === 0) {
             return response()->json([
-                'success' => false,
-                'message' => 'No data found with HTTP request. The site may load results with JavaScript.',
+                'success' => true,
+                'message' => 'No matching record was found in the available search data.',
                 'keyword' => $keyword,
                 'total' => 0,
                 'data' => [],

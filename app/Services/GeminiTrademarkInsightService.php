@@ -10,35 +10,16 @@ use Throwable;
 
 class GeminiTrademarkInsightService
 {
-    private const SCHEMA_VERSION = 'trademark-ai-insights-v2';
-
-    private const ACTIVE_STATUSES = [
-        'registered',
-        'accepted',
-        'accepted & advertised',
-        'advertised before accepted',
-        'opposed',
-        'objected',
-        'formalities chk pass',
-        'marked for exam',
-        'send to vienna codification',
-        'exam report issued',
-    ];
+    public const SCHEMA_VERSION = 'trademark-ai-insights-v4';
 
     private const SYSTEM_INSTRUCTION = <<<'INSTRUCTION'
-You are an assistant that explains trademark search risk results.
+You explain a trademark search-data risk calculation.
 
-You will receive a trademark keyword, optional trademark class, optional proposed goods or services, fixed numeric risk results, and a list of matching trademark records.
+The numeric score and all counts have already been calculated by Laravel. Explain the supplied result only. Never change or challenge the supplied numeric values.
 
-The numeric values were already calculated by the application. Never recalculate, modify, challenge, or replace the supplied registration probability, conflict risk, risk level, counts, or factor scores.
+Never calculate or return a registration percentage, conflict percentage, risk level, count, or chart value. Never invent trademark records, statuses, owners, classes, legal exceptions, or registry outcomes. Never claim acceptance or refusal is guaranteed. Never mention scraping, malformed data, parsing, internal processing, raw data, or API errors. Never ask the user to choose a trademark class or enter goods or services.
 
-Your job is only to explain the supplied result in simple and professional English. Base every statement only on the supplied data. Do not invent trademark records, legal outcomes, government decisions, owners, classes, statuses, or similarity values. Do not claim that registration will definitely be approved or rejected.
-
-Do not mention data acquisition, data quality, parsing, source reliability, internal processing, raw data, descriptions removed during cleaning, or system errors. Reasons must explain why the supplied score is high or low. Warnings must be useful and actionable for the user.
-
-A warning is allowed only when the user can take an action, such as selecting a trademark class, entering proposed goods or services, reviewing an active same-class mark, checking a close name variation, or consulting a trademark professional. If a hard conflict is supplied, explain that an active exact same-class mark and overlapping goods or services create a major registration obstacle. Never describe a hard conflict as safe or low risk. If no trademark class was selected, do not provide a numeric conclusion.
-
-The summary must be one or two short sentences. Keep all language short, clear, calm, and easy to understand. Do not provide legal advice. Do not return Markdown, HTML, code fences, or extra JSON properties. Return valid JSON matching the supplied schema only.
+Use only the supplied calculated result and relevant records. Return a short professional summary, evidence-based reasons, and useful warnings with recommended actions. A zero-result search is positive search evidence but does not prove legal availability. Return valid JSON matching the supplied schema only, without Markdown or HTML.
 INSTRUCTION;
 
     public function __construct(private readonly TrademarkProbabilityService $probabilityService) {}
@@ -50,12 +31,9 @@ INSTRUCTION;
      */
     public function generate(array $analysis, array $records): array
     {
-        $relevantMatches = $this->relevantMatches($analysis, $records);
-
         if (! config('services.gemini.enabled') || blank(config('services.gemini.api_key'))) {
             return $this->fallback($analysis);
         }
-
         $cacheKey = $this->cacheKey($analysis, $records);
         $cached = Cache::get($cacheKey);
         if (is_array($cached)) {
@@ -69,26 +47,21 @@ INSTRUCTION;
                 ->connectTimeout(5)
                 ->timeout(15)
                 ->retry(2, 250, throw: false)
-                ->post($this->endpoint(), $this->requestPayload($analysis, $relevantMatches));
-
+                ->post($this->endpoint(), $this->requestPayload($analysis, $this->relevantMatches($analysis, $records)));
             if (! $response->successful()) {
                 Log::warning('Gemini trademark insights request failed.', ['status' => $response->status()]);
 
                 return $this->fallback($analysis);
             }
-
             $text = $response->json('candidates.0.content.parts.0.text');
             $decoded = is_string($text) ? json_decode($text, true) : null;
             $validated = $this->validatedOutput($decoded);
-
             if ($validated === null) {
                 Log::warning('Gemini trademark insights returned an invalid structured response.');
 
                 return $this->fallback($analysis);
             }
-
-            $validated = $this->applyFixedResultRules($validated, $analysis);
-
+            $validated = $this->applyRequiredWarnings($validated, $analysis);
             $insights = ['generated_by' => 'gemini', ...$validated];
             Cache::put($cacheKey, $insights, now()->addMinutes(30));
 
@@ -102,54 +75,38 @@ INSTRUCTION;
         return $this->fallback($analysis);
     }
 
-    /**
-     * @param  array<string, mixed>  $analysis
-     * @param  array<int, array<string, mixed>>  $matches
-     * @return array<string, mixed>
-     */
+    /** @param array<int, array<string, mixed>> $matches */
     private function requestPayload(array $analysis, array $matches): array
     {
+        $countKeys = [
+            'total_unique_marks', 'exact_active_word_marks', 'exact_active_device_marks',
+            'exact_pending_word_marks', 'exact_pending_device_marks', 'very_close_active_marks',
+            'close_active_marks', 'phonetic_active_matches', 'inactive_exact_marks',
+            'active_marks', 'pending_marks', 'inactive_marks', 'unique_active_classes',
+            'highest_name_similarity',
+        ];
+        $counts = [];
+        foreach ($countKeys as $key) {
+            $counts[$key] = $analysis[$key];
+        }
         $input = [
-            'instruction' => 'Explain the supplied calculated result. Do not change any numeric value. Generate a short summary, evidence-based reasons, and only useful user-actionable warnings.',
+            'instruction' => 'Explain the supplied fixed Laravel result. Do not calculate or output numeric scores.',
             'keyword' => $analysis['keyword'],
-            'selected_class' => $analysis['requested_class'],
-            'proposed_description' => $analysis['proposed_description'],
             'calculated_result' => [
-                'analysis_mode' => $analysis['analysis_mode'],
-                'analysis_quality' => $analysis['analysis_quality'],
                 'registration_probability' => $analysis['registration_probability'],
                 'conflict_risk' => $analysis['conflict_risk'],
                 'risk_level' => $analysis['risk_level'],
-                'hard_conflict' => $analysis['hard_conflict'],
-                'hard_conflict_reason' => $analysis['hard_conflict_reason'],
-                'exact_registered_word_marks' => $analysis['exact_registered_word_marks'],
-                'exact_registered_device_marks' => $analysis['exact_registered_device_marks'],
-                'exact_same_class_word_marks' => $analysis['exact_same_class_word_marks'],
-                'exact_same_class_device_marks' => $analysis['exact_same_class_device_marks'],
-                'highest_name_similarity' => $analysis['highest_name_similarity'],
-                'highest_description_similarity' => $analysis['highest_description_similarity'],
-                'similar_active_marks' => $analysis['similar_registered_marks'],
-                'same_class_matches' => $analysis['same_class_registered_marks'],
-                'active_marks' => $analysis['active_marks'],
-                'inactive_marks' => $analysis['inactive_marks'],
+                'confidence_score' => $analysis['confidence_score'],
+                'counts' => $counts,
+                'factors' => $analysis['factors'],
             ],
-            'risk_factors' => array_map(
-                fn (array $factor): array => ['label' => $factor['label'], 'score' => $factor['score']],
-                array_values(array_filter($analysis['factors'], fn (array $factor): bool => $factor['score'] !== null)),
-            ),
-            'relevant_matches' => $matches,
+            'relevant_records' => $matches,
         ];
 
         return [
             'system_instruction' => ['parts' => [['text' => self::SYSTEM_INSTRUCTION]]],
-            'contents' => [[
-                'role' => 'user',
-                'parts' => [['text' => json_encode($input, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]],
-            ]],
-            'generationConfig' => [
-                'responseMimeType' => 'application/json',
-                'responseSchema' => $this->responseSchema(),
-            ],
+            'contents' => [['role' => 'user', 'parts' => [['text' => json_encode($input, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]]]],
+            'generationConfig' => ['responseMimeType' => 'application/json', 'responseSchema' => $this->responseSchema()],
         ];
     }
 
@@ -163,7 +120,7 @@ INSTRUCTION;
             'properties' => [
                 'summary' => ['type' => 'STRING', 'maxLength' => 500],
                 'reasons' => [
-                    'type' => 'ARRAY', 'minItems' => 2, 'maxItems' => 5,
+                    'type' => 'ARRAY', 'minItems' => 1, 'maxItems' => 5,
                     'items' => [
                         'type' => 'OBJECT',
                         'required' => ['title', 'detail', 'impact'],
@@ -190,22 +147,18 @@ INSTRUCTION;
         ];
     }
 
-    /**
-     * @param  array<string, mixed>|null  $output
-     * @return array<string, mixed>|null
-     */
-    private function validatedOutput(?array $output): ?array
+    /** @return array<string, mixed>|null */
+    private function validatedOutput(mixed $output): ?array
     {
-        if ($output === null || ! $this->hasExactKeys($output, ['summary', 'reasons', 'warnings'])) {
+        if (! is_array($output) || ! $this->hasExactKeys($output, ['summary', 'reasons', 'warnings'])) {
             return null;
         }
-        if (! $this->validText($output['summary'], 500) || ! is_array($output['reasons']) || ! array_is_list($output['reasons']) || count($output['reasons']) < 2 || count($output['reasons']) > 5) {
+        if (! $this->validText($output['summary'], 500) || ! is_array($output['reasons']) || ! array_is_list($output['reasons']) || count($output['reasons']) < 1 || count($output['reasons']) > 5) {
             return null;
         }
         if (! is_array($output['warnings']) || ! array_is_list($output['warnings']) || count($output['warnings']) > 3) {
             return null;
         }
-
         foreach ($output['reasons'] as $reason) {
             if (! is_array($reason) || ! $this->hasExactKeys($reason, ['title', 'detail', 'impact']) || ! $this->validText($reason['title'], 120) || ! $this->validText($reason['detail'], 500) || ! in_array($reason['impact'], ['positive', 'negative', 'neutral'], true)) {
                 return null;
@@ -216,15 +169,14 @@ INSTRUCTION;
                 return null;
             }
         }
-
-        $visibleText = [$output['summary']];
+        $visible = [$output['summary']];
         foreach ($output['reasons'] as $reason) {
-            array_push($visibleText, $reason['title'], $reason['detail']);
+            array_push($visible, $reason['title'], $reason['detail']);
         }
         foreach ($output['warnings'] as $warning) {
-            array_push($visibleText, $warning['title'], $warning['detail'], $warning['action']);
+            array_push($visible, $warning['title'], $warning['detail'], $warning['action']);
         }
-        if ($this->containsInternalLanguage(implode(' ', $visibleText))) {
+        if ($this->containsForbiddenLanguage(implode(' ', $visible))) {
             return null;
         }
 
@@ -243,100 +195,37 @@ INSTRUCTION;
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $insights
-     * @return array<string, mixed>
-     */
-    private function applyFixedResultRules(array $insights, array $analysis): array
+    private function applyRequiredWarnings(array $insights, array $analysis): array
     {
-        if ($analysis['analysis_mode'] === 'preliminary') {
-            $insights['summary'] = 'Select the proposed trademark class to calculate a class-specific registration estimate.';
+        if ($analysis['total_unique_marks'] === 0) {
             $insights['warnings'] = $analysis['warnings'];
-
-            return $insights;
-        }
-
-        $insights['warnings'] = array_values(array_filter(
-            $insights['warnings'],
-            fn (array $warning): bool => preg_match('/class.{0,40}(?:not selected|was not selected)|no (?:trademark )?class/iu', implode(' ', $warning)) !== 1,
-        ));
-
-        foreach ($analysis['warnings'] as $requiredWarning) {
-            $exists = collect($insights['warnings'])->contains(
-                fn (array $warning): bool => mb_strtolower($warning['title']) === mb_strtolower($requiredWarning['title'])
-            );
-            if (! $exists) {
-                if (count($insights['warnings']) >= 3) {
-                    array_pop($insights['warnings']);
-                }
-                $insights['warnings'][] = $requiredWarning;
-            }
-        }
-
-        if ($analysis['hard_conflict']) {
-            $insights['summary'] = $analysis['hard_conflict_reason'].' This creates a major registration obstacle and may need professional review.';
-            $insights['reasons'] = array_values(array_filter(
-                $insights['reasons'],
-                fn (array $reason): bool => $reason['impact'] !== 'positive'
-                    && preg_match('/\b(?:safe|low risk|no exact (?:word )?mark)\b/iu', $reason['title'].' '.$reason['detail']) !== 1,
-            ));
-            array_unshift($insights['reasons'], [
-                'title' => 'Exact same-class conflict',
-                'detail' => $analysis['hard_conflict_reason'],
-                'impact' => 'negative',
-            ]);
-            if (count($insights['reasons']) < 2) {
-                $insights['reasons'][] = [
-                    'title' => 'Professional review may be needed',
-                    'detail' => 'Review the active same-class mark and overlapping goods or services before filing.',
-                    'impact' => 'neutral',
-                ];
-            }
-            $insights['reasons'] = array_slice($insights['reasons'], 0, 5);
         }
 
         return $insights;
     }
 
-    /** @param array<string, mixed> $analysis */
+    /** @return array<string, mixed> */
     private function fallback(array $analysis): array
     {
-        if ($analysis['analysis_mode'] === 'preliminary') {
-            return [
-                'generated_by' => 'fallback',
-                'summary' => 'Select the proposed trademark class to calculate a class-specific registration estimate.',
-                'reasons' => [
-                    ['title' => 'General search only', 'detail' => 'The available matches were counted across all trademark classes.', 'impact' => 'neutral'],
-                    ['title' => 'Class-specific check pending', 'detail' => 'Same-class trademark conflicts have not been checked.', 'impact' => 'neutral'],
-                ],
-                'warnings' => $analysis['warnings'],
-            ];
-        }
-
         $reasons = [];
-        if ($analysis['exact_same_class_word_marks'] > 0) {
-            $reasons[] = ['title' => 'Exact same-class Word marks found', 'detail' => 'Active Word marks with the exact name were found in the selected class.', 'impact' => 'negative'];
-        } elseif ($analysis['exact_registered_word_marks'] > 0) {
-            $reasons[] = ['title' => 'Exact Word marks found', 'detail' => 'Active registered Word marks with the exact name were found.', 'impact' => 'negative'];
+        if ($analysis['total_unique_marks'] === 0) {
+            $summary = 'The available search data shows no active exact or close trademark match.';
+            $reasons[] = ['title' => 'No matching record found', 'detail' => 'No matching active mark was found in the available search records.', 'impact' => 'positive'];
         } else {
-            $reasons[] = ['title' => 'No exact Word mark found', 'detail' => 'No active registered Word mark with the exact searched name was found.', 'impact' => 'positive'];
+            $summary = "The fixed search-data calculation gives a {$analysis['registration_probability']}% registration estimate and {$analysis['risk_level']} risk.";
         }
-        if ($analysis['exact_registered_device_marks'] > 0) {
-            $reasons[] = ['title' => 'Device marks found', 'detail' => 'Registered Device marks using the same name were found.', 'impact' => 'negative'];
+        if ($analysis['exact_active_word_marks'] > 0) {
+            $reasons[] = ['title' => 'Exact active Word marks', 'detail' => 'Active Word trademarks with the exact searched name were found.', 'impact' => 'negative'];
         }
-        if ($analysis['similar_registered_marks'] > 0) {
-            $reasons[] = ['title' => 'Similar names found', 'detail' => 'Active trademarks with similar names were found.', 'impact' => 'negative'];
+        if ($analysis['exact_active_device_marks'] > 0) {
+            $reasons[] = ['title' => 'Exact active Device marks', 'detail' => 'Active Device trademarks using the exact searched name were found.', 'impact' => 'negative'];
         }
-        if (($analysis['same_class_registered_marks'] ?? 0) > 0) {
-            $reasons[] = ['title' => 'Selected class has matches', 'detail' => 'Active marks were found in the selected trademark class.', 'impact' => 'negative'];
+        if ($analysis['similar_active_marks'] > 0) {
+            $reasons[] = ['title' => 'Similar active names', 'detail' => 'Active trademarks with similar names were found.', 'impact' => 'negative'];
         }
-        if (count($reasons) < 2) {
-            $reasons[] = ['title' => 'Overall calculated risk', 'detail' => "The fixed calculation places this search in the {$analysis['risk_level']} risk range.", 'impact' => $analysis['conflict_risk'] < 30 ? 'positive' : 'neutral'];
+        if ($reasons === []) {
+            $reasons[] = ['title' => 'Search record context', 'detail' => 'The supplied records were evaluated by name similarity, status, type and class spread.', 'impact' => 'neutral'];
         }
-
-        $summary = $analysis['hard_conflict']
-            ? $analysis['hard_conflict_reason'].' This creates a major registration obstacle and may need professional review.'
-            : "The calculated registration chance is {$analysis['registration_probability']}% with a {$analysis['risk_level']} conflict risk.";
 
         return [
             'generated_by' => 'fallback',
@@ -346,103 +235,64 @@ INSTRUCTION;
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $analysis
-     * @param  array<int, array<string, mixed>>  $records
-     * @return array<int, array<string, mixed>>
-     */
+    /** @return array<int, array<string, mixed>> */
     private function relevantMatches(array $analysis, array $records): array
     {
-        $keyword = $this->normalizeName((string) $analysis['keyword']);
-        $selectedClass = $analysis['requested_class'];
         $seen = [];
         $matches = [];
-
         foreach ($records as $record) {
-            $name = $this->plainText((string) ($record['trademark_name'] ?? ''));
-            $normalizedName = $this->normalizeName($name);
-            $status = $this->normalizeStatus((string) ($record['status'] ?? ''));
-            $type = $this->plainText((string) ($record['type'] ?? ''));
-            $classes = $this->classes((string) ($record['class'] ?? ''), (string) ($record['description'] ?? ''));
-            $proprietor = $this->plainText((string) ($record['proprietor'] ?? ''));
-            if ($status !== '' && preg_match('/\s+'.preg_quote($status, '/').'\s*$/iu', $proprietor) === 1) {
-                $proprietor = trim((string) preg_replace('/\s+'.preg_quote($status, '/').'\s*$/iu', '', $proprietor));
-            }
             $applicationId = trim((string) ($record['application_id'] ?? ''));
-            $fingerprint = $applicationId !== ''
-                ? 'id:'.mb_strtolower($applicationId)
-                : hash('sha256', implode('|', [$normalizedName, implode(',', $classes), mb_strtolower($type), mb_strtolower($proprietor)]));
-
+            $name = $this->plainText((string) ($record['trademark_name'] ?? ''));
+            $status = $this->plainText((string) ($record['status'] ?? ''));
+            $type = $this->plainText((string) ($record['type'] ?? ''));
+            $class = $this->plainText((string) ($record['class'] ?? ''));
+            $proprietor = $this->plainText((string) ($record['proprietor'] ?? ''));
+            $fingerprint = $applicationId !== '' ? 'id:'.mb_strtolower($applicationId) : hash('sha256', mb_strtolower(implode('|', [$name, $status, $type, $class, $proprietor])));
             if (isset($seen[$fingerprint])) {
                 continue;
             }
             $seen[$fingerprint] = true;
-
-            $isActive = in_array($status, self::ACTIVE_STATUSES, true);
-            if (! $isActive) {
-                continue;
-            }
-            $isExact = $normalizedName === $keyword;
-            $similarity = $this->probabilityService->nameSimilarity($keyword, $normalizedName);
-            $isSameClass = $selectedClass !== null && in_array((string) $selectedClass, $classes, true);
-            $typeKey = mb_strtolower($type);
-            $rank = match (true) {
-                $isExact && $isActive && in_array($typeKey, ['word', 'wordmark', 'word mark'], true) => 1,
-                $isExact && $isActive && in_array($typeKey, ['device', 'logo', 'label', 'device mark'], true) => 2,
-                $isSameClass && $isActive => 3,
-                $similarity >= 80 && $isActive => 4,
-                default => 5,
-            };
-            $description = strip_tags(html_entity_decode((string) ($record['description'] ?? ''), ENT_QUOTES | ENT_HTML5));
-            if (preg_match('/View All Results|Search by Proprietor Name|Upgrade\s*₹/iu', $description) === 1) {
-                $description = '';
-            }
-
+            $similarity = $this->probabilityService->nameSimilarity((string) $analysis['keyword'], $name);
             $matches[] = [
-                '_rank' => $rank,
                 '_similarity' => $similarity,
                 'trademark_name' => $name,
-                'status' => $this->plainText((string) ($record['status'] ?? '')),
-                'class' => $this->plainText((string) ($record['class'] ?? '')),
+                'name_similarity' => (int) round($similarity),
+                'status' => $status,
                 'type' => $type,
+                'class' => $class,
                 'proprietor' => $proprietor,
-                'calculated_name_similarity' => $similarity,
-                'description' => mb_substr(trim(preg_replace('/\s+/u', ' ', $description) ?? ''), 0, 300),
             ];
         }
-
-        usort($matches, fn (array $left, array $right): int => [$left['_rank'], -$left['_similarity']] <=> [$right['_rank'], -$right['_similarity']]);
+        usort($matches, fn (array $left, array $right): int => $right['_similarity'] <=> $left['_similarity']);
 
         return array_map(function (array $match): array {
-            unset($match['_rank'], $match['_similarity']);
+            unset($match['_similarity']);
 
             return $match;
         }, array_slice($matches, 0, 10));
     }
 
-    /** @param array<string, mixed> $analysis */
     private function cacheKey(array $analysis, array $records): string
     {
         $fingerprints = array_map(fn (array $record): string => implode('|', [
             trim((string) ($record['application_id'] ?? '')),
-            $this->normalizeName((string) ($record['trademark_name'] ?? '')),
-            $this->normalizeStatus((string) ($record['status'] ?? '')),
-            trim((string) ($record['class'] ?? '')),
+            mb_strtolower(trim((string) ($record['trademark_name'] ?? ''))),
+            mb_strtolower(trim((string) ($record['status'] ?? ''))),
             mb_strtolower(trim((string) ($record['type'] ?? ''))),
+            trim((string) ($record['class'] ?? '')),
         ]), $records);
         sort($fingerprints, SORT_STRING);
 
         return 'trademark-ai-insights:'.hash('sha256', implode('::', [
             self::SCHEMA_VERSION,
             (string) config('services.gemini.model'),
-            $this->normalizeName((string) $analysis['keyword']),
-            (string) ($analysis['requested_class'] ?? ''),
-            $this->normalizeName((string) ($analysis['proposed_description'] ?? '')),
-            (string) $analysis['hard_conflict'],
+            mb_strtolower(trim((string) $analysis['keyword'])),
             (string) $analysis['registration_probability'],
             (string) $analysis['conflict_risk'],
             (string) $analysis['risk_level'],
-            implode(';;', $fingerprints),
+            (string) $analysis['confidence_score'],
+            json_encode($analysis['factors']),
+            $fingerprints === [] ? 'empty-result-set' : implode(';;', $fingerprints),
         ]));
     }
 
@@ -453,7 +303,6 @@ INSTRUCTION;
         return "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
     }
 
-    /** @param array<string, mixed> $value */
     private function hasExactKeys(array $value, array $keys): bool
     {
         $actual = array_keys($value);
@@ -472,22 +321,9 @@ INSTRUCTION;
             && preg_match('/```|(?:^|\n)\s*#{1,6}\s|\*\*|__|\[[^\]]+\]\([^)]+\)/u', $value) !== 1;
     }
 
-    private function containsInternalLanguage(string $text): bool
+    private function containsForbiddenLanguage(string $text): bool
     {
-        return preg_match('/scrap(?:e|ed|ing)|malformed\s+(?:scraped\s+)?data|incomplete\s+(?:scraped\s+)?data|source website|parsing issue|quickcompany|contaminated description|internal data|raw data|internal processing|processing error/iu', $text) === 1;
-    }
-
-    private function normalizeName(string $value): string
-    {
-        $value = mb_strtolower(str_replace(['™', '®'], '', trim($value)));
-        $value = preg_replace('/[^\pL\pN\s]/u', '', $value) ?? '';
-
-        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
-    }
-
-    private function normalizeStatus(string $status): string
-    {
-        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $status) ?? ''));
+        return preg_match('/scrap(?:e|ed|ing)|malformed|source website|parsing|internal (?:data|processing)|raw data|api (?:key|error)|(?:select|choose).{0,30}(?:trademark )?class|class.{0,30}(?:not selected|required)/iu', $text) === 1;
     }
 
     private function plainText(string $value): string
@@ -495,20 +331,5 @@ INSTRUCTION;
         $value = strip_tags(html_entity_decode($value, ENT_QUOTES | ENT_HTML5));
 
         return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
-    }
-
-    /** @return array<int, string> */
-    private function classes(string $classField, string $description): array
-    {
-        $classes = preg_split('/\s*,\s*/', $classField, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        preg_match_all('/\[\s*class\s*:\s*([^\]]+)\]/iu', $description, $matches);
-        foreach ($matches[1] ?? [] as $match) {
-            array_push($classes, ...(preg_split('/\s*,\s*/', $match, -1, PREG_SPLIT_NO_EMPTY) ?: []));
-        }
-
-        $classes = array_values(array_unique(array_map(fn (string $class): string => $this->plainText($class), $classes)));
-        sort($classes, SORT_NATURAL);
-
-        return $classes;
     }
 }

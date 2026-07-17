@@ -1900,13 +1900,11 @@ body.trademark-search-page .tm-results-shell {
 
 .tm-probability-controls {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(230px, 1fr) auto;
+    grid-template-columns: minmax(180px, 1fr) auto;
     gap: 18px;
     align-items: end;
     margin-bottom: 24px;
 }
-
-.tm-proposed-description-control { grid-column: span 2; }
 
 .tm-probability-controls span {
     display: block;
@@ -1936,11 +1934,10 @@ body.trademark-search-page .tm-results-shell {
 #tm-probability-content[hidden],
 #tm-probability-error[hidden],
 #tm-warnings-section[hidden],
-.tm-class-specific-count[hidden],
-#tm-probability-overview-card[hidden],
-#tm-hard-conflict-reason[hidden] {
+#tm-probability-overview-card[hidden] {
     display: none !important;
 }
+.tm-probability-charts[hidden] { display: none !important; }
 
 .tm-probability-summary,
 .tm-probability-counts {
@@ -1949,6 +1946,8 @@ body.trademark-search-page .tm-results-shell {
     gap: 16px;
     margin-bottom: 20px;
 }
+
+.tm-probability-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 .tm-probability-summary > div,
 .tm-probability-counts > div,
@@ -1985,25 +1984,15 @@ body.trademark-search-page .tm-results-shell {
 }
 
 .tm-probability-score.is-registration strong { color: #078d80; }
-.tm-probability-score.is-registration.is-preliminary strong { color: #526076; font-size: 1.35rem; }
 .tm-probability-score.is-conflict strong { color: #dc454e; }
+.tm-probability-confidence strong { color: #325d88; }
 .tm-probability-level strong { display: inline-flex; padding: 7px 13px; border-radius: 999px; font-size: 0.9rem; }
 .tm-probability-level strong.is-low { color: #087c49; background: #dff6e6; }
-.tm-probability-level strong.is-medium { color: #a6640b; background: #fff0d5; }
+.tm-probability-level strong.is-medium,
+.tm-probability-level strong.is-moderate { color: #a6640b; background: #fff0d5; }
 .tm-probability-level strong.is-high,
 .tm-probability-level strong.is-very-high,
 .tm-probability-level strong.is-critical { color: #b72e38; background: #ffe3e6; }
-.tm-probability-level strong.is-class-required { color: #325d88; background: #e5f0fb; }
-
-.tm-hard-conflict-reason {
-    margin: -4px 0 20px;
-    padding: 14px 18px;
-    border: 1px solid #f2b8bd;
-    border-radius: 12px;
-    color: #9d222d;
-    background: #fff0f1;
-    font-weight: 800;
-}
 
 .tm-probability-charts {
     display: grid;
@@ -2011,7 +2000,6 @@ body.trademark-search-page .tm-results-shell {
     gap: 20px;
     margin-bottom: 20px;
 }
-.tm-probability-charts.is-preliminary { grid-template-columns: 1fr; }
 
 .tm-ai-summary-card {
     margin-bottom: 20px;
@@ -2027,6 +2015,7 @@ body.trademark-search-page .tm-results-shell {
     font-size: 1rem;
     font-weight: 900;
 }
+.tm-ai-summary-card h3 span { margin-left: 8px; color: #6b7890; font-size: 0.72rem; text-transform: uppercase; }
 
 .tm-ai-summary-card p {
     margin: 0;

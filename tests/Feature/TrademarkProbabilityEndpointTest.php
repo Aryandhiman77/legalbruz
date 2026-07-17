@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class TrademarkProbabilityEndpointTest extends TestCase
@@ -12,81 +13,61 @@ class TrademarkProbabilityEndpointTest extends TestCase
         config(['services.gemini.enabled' => false]);
     }
 
-    public function test_valid_request_returns_required_json_structure_without_authentication(): void
+    public function test_empty_data_is_valid_and_returns_complete_numeric_analysis(): void
     {
-        $response = $this->postJson(route('trademark.ai-probability'), $this->validPayload());
+        $response = $this->postJson(route('trademark.ai-probability'), ['keyword' => 'NewBrand', 'data' => []]);
 
         $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('analysis.registration_probability', 95)
+            ->assertJsonPath('analysis.conflict_risk', 5)
+            ->assertJsonPath('analysis.risk_level', 'Low')
+            ->assertJsonPath('analysis.total_unique_marks', 0)
+            ->assertJsonPath('analysis.exact_active_word_marks', 0)
+            ->assertJsonPath('analysis.exact_active_device_marks', 0)
+            ->assertJsonPath('analysis.similar_active_marks', 0)
+            ->assertJsonPath('analysis.unique_active_classes', 0)
+            ->assertJsonCount(6, 'analysis.factors');
+    }
+
+    public function test_response_contains_v4_counts_factors_confidence_and_insights(): void
+    {
+        $this->postJson(route('trademark.ai-probability'), $this->payload())
+            ->assertOk()
             ->assertJsonStructure([
                 'success',
                 'analysis' => [
-                    'keyword', 'analysis_mode', 'analysis_quality', 'class_required',
-                    'requested_class', 'proposed_description', 'registration_probability', 'conflict_risk',
-                    'risk_level', 'total_unique_marks', 'exact_registered_word_marks',
-                    'exact_registered_device_marks', 'similar_registered_marks',
-                    'same_class_registered_marks', 'opposed_or_objected_marks', 'active_marks',
-                    'inactive_marks', 'hard_conflict', 'hard_conflict_reason',
-                    'exact_same_class_word_marks', 'exact_same_class_device_marks',
-                    'highest_name_similarity', 'highest_description_similarity',
+                    'keyword', 'registration_probability', 'conflict_risk', 'risk_level', 'confidence_score',
+                    'total_unique_marks', 'exact_active_word_marks', 'exact_active_device_marks',
+                    'exact_pending_word_marks', 'exact_pending_device_marks', 'very_close_active_marks',
+                    'close_active_marks', 'phonetic_active_matches', 'inactive_exact_marks', 'active_marks',
+                    'pending_marks', 'inactive_marks', 'unique_active_classes', 'highest_name_similarity',
+                    'exact_registered_word_marks', 'exact_registered_device_marks', 'similar_active_marks',
                     'factors', 'reasons', 'warnings', 'disclaimer',
                     'ai_insights' => ['generated_by', 'summary', 'reasons', 'warnings'],
                 ],
-            ])
-            ->assertJsonPath('success', true);
+            ]);
     }
 
-    public function test_preliminary_response_has_no_numeric_probability_or_risk(): void
+    public function test_class_and_description_are_not_required(): void
     {
-        $this->postJson(route('trademark.ai-probability'), $this->validPayload())
+        $this->postJson(route('trademark.ai-probability'), ['keyword' => 'NewBrand', 'data' => []])
             ->assertOk()
-            ->assertJsonPath('analysis.analysis_mode', 'preliminary')
-            ->assertJsonPath('analysis.class_required', true)
-            ->assertJsonPath('analysis.registration_probability', null)
-            ->assertJsonPath('analysis.conflict_risk', null)
-            ->assertJsonPath('analysis.risk_level', 'Class Required')
-            ->assertJsonPath('analysis.same_class_registered_marks', null)
-            ->assertJsonPath('analysis.ai_insights.summary', 'Select the proposed trademark class to calculate a class-specific registration estimate.')
-            ->assertJsonPath('analysis.ai_insights.warnings.0.title', 'Trademark class required');
+            ->assertJsonMissingValidationErrors(['requested_class', 'class', 'proposed_description'])
+            ->assertJsonMissing(['risk_level' => 'More Information Required'])
+            ->assertJsonMissing(['risk_level' => 'Class Required']);
     }
 
-    public function test_proposed_description_is_limited_to_two_thousand_characters(): void
+    public function test_invalid_core_request_returns_422(): void
     {
-        $payload = $this->validPayload();
-        $payload['proposed_description'] = str_repeat('x', 2001);
-
-        $this->postJson(route('trademark.ai-probability'), $payload)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('proposed_description');
-    }
-
-    public function test_frontend_has_preliminary_display_and_hides_probability_chart(): void
-    {
-        $source = file_get_contents(resource_path('views/home.blade.php'));
-
-        $this->assertStringContainsString("isPreliminary ? 'Select class'", $source);
-        $this->assertStringContainsString("isPreliminary ? 'Not calculated'", $source);
-        $this->assertStringContainsString("tmEls['tm-probability-overview-card'].hidden = isPreliminary", $source);
-        $this->assertStringContainsString("is-class-required", file_get_contents(public_path('css/home.css')));
-        $this->assertStringNotContainsString("isPreliminary ? 'Low'", $source);
-    }
-
-    public function test_invalid_request_returns_422(): void
-    {
-        $this->postJson(route('trademark.ai-probability'), ['keyword' => 123, 'data' => 'bad'])
+        $this->postJson(route('trademark.ai-probability'), ['keyword' => 123])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['keyword', 'data']);
     }
 
-    public function test_empty_data_is_rejected(): void
+    public function test_more_than_one_hundred_records_is_rejected(): void
     {
-        $this->postJson(route('trademark.ai-probability'), ['keyword' => 'Amazon', 'data' => []])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('data');
-    }
-
-    public function test_more_than_100_records_is_rejected(): void
-    {
-        $payload = $this->validPayload();
+        $payload = $this->payload();
         $payload['data'] = array_fill(0, 101, $payload['data'][0]);
 
         $this->postJson(route('trademark.ai-probability'), $payload)
@@ -94,7 +75,64 @@ class TrademarkProbabilityEndpointTest extends TestCase
             ->assertJsonValidationErrors('data');
     }
 
-    public function test_route_uses_web_csrf_behavior_without_requiring_authentication(): void
+    public function test_search_endpoint_marks_valid_zero_result_search_successful(): void
+    {
+        Http::fake(['www.quickcompany.in/*' => Http::response('<html><body>No matches</body></html>', 200)]);
+
+        $this->getJson('/scrape-trademark?keyword=NewBrand')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total', 0)
+            ->assertJsonPath('data', []);
+    }
+
+    public function test_frontend_enables_button_for_successful_zero_results(): void
+    {
+        $source = file_get_contents(resource_path('views/home.blade.php'));
+
+        $this->assertStringContainsString('tmSearchState.searchCompleted', $source);
+        $this->assertStringContainsString('tmSearchState.searchSucceeded', $source);
+        $this->assertStringContainsString('tmSearchState.keyword.trim().length >= 2', $source);
+        $this->assertStringNotContainsString('results.length === 0', $source);
+        $this->assertStringNotContainsString('results.length > 0', $source);
+    }
+
+    public function test_frontend_always_recreates_both_charts(): void
+    {
+        $source = file_get_contents(resource_path('views/home.blade.php'));
+
+        $this->assertStringContainsString('tmProbabilityDoughnutChart?.destroy()', $source);
+        $this->assertStringContainsString('tmProbabilityFactorsChart?.destroy()', $source);
+        $this->assertStringContainsString("type: 'doughnut'", $source);
+        $this->assertStringContainsString("type: 'bar'", $source);
+        $this->assertStringContainsString("indexAxis: 'y'", $source);
+        $this->assertStringContainsString('maintainAspectRatio: false', $source);
+        $this->assertStringNotContainsString('charts.hidden', $source);
+        $this->assertStringNotContainsString('if (isPreliminary)', $source);
+    }
+
+    public function test_probability_modal_has_only_search_term_and_required_cards(): void
+    {
+        $source = file_get_contents(resource_path('views/home.blade.php'));
+
+        $this->assertStringNotContainsString('id="tm-probability-class"', $source);
+        $this->assertStringNotContainsString('id="tm-proposed-description"', $source);
+        $this->assertStringNotContainsString('Same-class matches', $source);
+        $this->assertStringNotContainsString('Not checked', $source);
+        $this->assertStringContainsString('Active classes found', $source);
+        $this->assertStringContainsString('id="tm-confidence-score"', $source);
+    }
+
+    public function test_modal_retains_mobile_responsive_layout(): void
+    {
+        $css = file_get_contents(public_path('css/home.css'));
+
+        $this->assertStringContainsString('@media (max-width: 767px)', $css);
+        $this->assertStringContainsString('.tm-probability-counts { grid-template-columns: 1fr; }', $css);
+        $this->assertStringContainsString('.tm-chart-card canvas { max-height: 270px; }', $css);
+    }
+
+    public function test_route_remains_public_throttled_and_csrf_protected(): void
     {
         $route = app('router')->getRoutes()->getByName('trademark.ai-probability');
 
@@ -104,11 +142,11 @@ class TrademarkProbabilityEndpointTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function validPayload(): array
+    private function payload(): array
     {
         return [
             'keyword' => 'Amazon',
-            'class' => null,
+            'source_type' => 'third_party',
             'data' => [[
                 'application_id' => '2640730',
                 'trademark_name' => 'Amazon',

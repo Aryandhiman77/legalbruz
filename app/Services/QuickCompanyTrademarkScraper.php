@@ -9,7 +9,7 @@ class QuickCompanyTrademarkScraper
 {
     public function scrapeWithoutBrowser(string $keyword): array
     {
-        $sourceUrl = 'https://www.quickcompany.in/trademarks?q=' . urlencode($keyword);
+        $sourceUrl = 'https://www.quickcompany.in/trademarks?q='.urlencode($keyword);
 
         $response = Http::timeout(30)
             ->withHeaders([
@@ -19,8 +19,8 @@ class QuickCompanyTrademarkScraper
             ])
             ->get($sourceUrl);
 
-        if (!$response->successful()) {
-            return [];
+        if (! $response->successful()) {
+            $response->throw();
         }
 
         return $this->extractData($response->body(), $keyword, $sourceUrl);
@@ -37,16 +37,16 @@ class QuickCompanyTrademarkScraper
             $text = $this->cleanText($node->text(''));
 
             if (
-                !str_contains($text, 'ID:') ||
-                !str_contains($text, 'Class:') ||
-                !preg_match('/Registered|Objected|Accepted|Advertised|Abandoned|Refused|Opposed|Removed/i', $text)
+                ! str_contains($text, 'ID:') ||
+                ! str_contains($text, 'Class:') ||
+                ! preg_match('/Registered|Objected|Accepted|Advertised|Abandoned|Refused|Opposed|Removed/i', $text)
             ) {
                 return;
             }
 
             $applicationId = $this->match('/ID:\s*([0-9]+)/', $text);
 
-            if (!$applicationId || in_array($applicationId, $seenIds, true)) {
+            if (! $applicationId || in_array($applicationId, $seenIds, true)) {
                 return;
             }
 
@@ -101,7 +101,7 @@ class QuickCompanyTrademarkScraper
                 $imageUrl = $img->first()->attr('src') ?: $img->first()->attr('data-src') ?: '';
 
                 if ($imageUrl && str_starts_with($imageUrl, '/')) {
-                    $imageUrl = 'https://www.quickcompany.in' . $imageUrl;
+                    $imageUrl = 'https://www.quickcompany.in'.$imageUrl;
                 }
             }
 
@@ -117,6 +117,7 @@ class QuickCompanyTrademarkScraper
                 'description' => $this->cleanText($description ?? ''),
                 'image_url' => $imageUrl,
                 'source_url' => $sourceUrl,
+                'source_type' => 'third_party',
             ];
         });
 

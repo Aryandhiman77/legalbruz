@@ -16,8 +16,8 @@
         "setasign/fpdf": "^1.8",
         "setasign/fpdi": "^2.6",
         "smalot/pdfparser": "^2.12",
-        "symfony/css-selector": "^8.0",
-        "symfony/dom-crawler": "^8.0"
+        "symfony/css-selector": "^7.2",
+        "symfony/dom-crawler": "^7.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -82,6 +82,9 @@
     },
     "config": {
         "optimize-autoloader": true,
+        "platform": {
+            "php": "8.2.0"
+        },
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {

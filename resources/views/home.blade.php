@@ -1440,20 +1440,6 @@
                             <span>Searched trademark</span>
                             <strong id="tm-probability-keyword">—</strong>
                         </div>
-                        <label for="tm-probability-class">
-                            <span>Trademark class</span>
-                            <select id="tm-probability-class" class="form-select">
-                                <option value="">General analysis (all classes)</option>
-                                @for ($trademarkClass = 1; $trademarkClass <= 45; $trademarkClass++)
-                                    <option value="{{ $trademarkClass }}">Class {{ $trademarkClass }}</option>
-                                @endfor
-                            </select>
-                        </label>
-                        <label for="tm-proposed-description" class="tm-proposed-description-control">
-                            <span>Proposed goods or services</span>
-                            <input id="tm-proposed-description" class="form-control" type="text" maxlength="2000"
-                                placeholder="Example: Recruitment, employment listing and job placement services">
-                        </label>
                         <button type="button" id="tm-probability-rerun" class="btn btn-outline-success">
                             Re-run analysis
                         </button>
@@ -1479,11 +1465,13 @@
                                 <span>Risk level</span>
                                 <strong id="tm-risk-level">—</strong>
                             </div>
+                            <div class="tm-probability-confidence">
+                                <span>Confidence</span>
+                                <strong id="tm-confidence-score">—</strong>
+                            </div>
                         </div>
-                        <div class="tm-hard-conflict-reason" id="tm-hard-conflict-reason" hidden></div>
-
                         <section class="tm-ai-summary-card">
-                            <h3><i class="bi bi-stars"></i> AI Analysis Summary</h3>
+                            <h3><i class="bi bi-stars"></i> AI Analysis Summary <span id="tm-analysis-quality"></span></h3>
                             <p id="tm-ai-summary"></p>
                         </section>
 
@@ -1493,13 +1481,10 @@
                         </div>
 
                         <div class="tm-probability-counts">
-                            <div><span>Exact registered Word marks</span><strong id="tm-count-word">0</strong></div>
-                            <div><span>Exact registered Device marks</span><strong id="tm-count-device">0</strong></div>
+                            <div><span>Exact active Word marks</span><strong id="tm-count-word">0</strong></div>
+                            <div><span>Exact active Device marks</span><strong id="tm-count-device">0</strong></div>
                             <div><span>Similar active marks</span><strong id="tm-count-similar">0</strong></div>
-                            <div><span>Same-class matches</span><strong id="tm-count-class">Not checked</strong></div>
-                            <div class="tm-class-specific-count"><span>Exact same-class Word marks</span><strong id="tm-count-same-class-word">0</strong></div>
-                            <div class="tm-class-specific-count"><span>Exact same-class Device marks</span><strong id="tm-count-same-class-device">0</strong></div>
-                            <div class="tm-class-specific-count" id="tm-highest-description-card"><span>Highest description similarity</span><strong id="tm-highest-description-similarity">Not compared</strong></div>
+                            <div><span>Active classes found</span><strong id="tm-count-class">0</strong></div>
                         </div>
 
                         <div class="tm-probability-details" id="tm-probability-details">
@@ -2192,6 +2177,10 @@
             keyword: '',
             results: [],
             filtered: [],
+            searchCompleted: false,
+            searchSucceeded: false,
+            searchLoading: false,
+            analysisLoading: false,
             savedSearches: JSON.parse(localStorage.getItem('legalbruzSavedTrademarkSearches') || '[]'),
             filters: {
                 statuses: new Set(['All Status']),
@@ -2214,15 +2203,14 @@
             [
                 'tm-entry-form', 'tm-search-keyword', 'tm-search-submit', 'tm-search-reset', 'tm-search-note',
                 'tm-results-shell', 'tm-results-keyword', 'tm-clear-inline', 'tm-strip-submit',
-                'tm-ai-probability', 'tm-probability-modal', 'tm-probability-class', 'tm-proposed-description',
+                'tm-ai-probability', 'tm-probability-modal',
                 'tm-probability-rerun', 'tm-probability-keyword', 'tm-probability-loading',
                 'tm-probability-error', 'tm-probability-content', 'tm-registration-chance',
                 'tm-conflict-risk', 'tm-risk-level', 'tm-count-word', 'tm-count-device',
                 'tm-count-similar', 'tm-count-class', 'tm-probability-reasons',
                 'tm-probability-warnings', 'tm-warnings-section', 'tm-probability-disclaimer',
                 'tm-ai-summary', 'tm-probability-details', 'tm-probability-overview-card',
-                'tm-hard-conflict-reason', 'tm-count-same-class-word', 'tm-count-same-class-device',
-                'tm-highest-description-card', 'tm-highest-description-similarity',
+                'tm-confidence-score', 'tm-analysis-quality',
                 'tm-refine-panel', 'tm-refine-head', 'tm-sheet-grab', 'tm-filter-sheet-content',
                 'tm-mobile-filter-backdrop', 'tm-mobile-panel-close',
                 'tm-save-search', 'tm-clear-filters', 'tm-status-options', 'tm-class-search',
@@ -2483,6 +2471,8 @@
             tmSearchState.keyword = keyword;
             tmSearchState.results = [];
             tmSearchState.filtered = [];
+            tmSearchState.searchCompleted = false;
+            tmSearchState.searchSucceeded = false;
             tmSearchState.page = 1;
             tmSearchState.classExpanded = false;
             updateAiProbabilityButton();
@@ -2503,18 +2493,25 @@
                 }
 
                 const payload = await response.json();
+                if (payload?.success !== true || !Array.isArray(payload.data)) {
+                    throw new Error('Search response was invalid.');
+                }
                 tmSearchState.results = (payload.data || []).map((item, index) => normalizeTrademarkRecord(item, index));
+                tmSearchState.searchCompleted = true;
+                tmSearchState.searchSucceeded = true;
                 clearTrademarkFilters(false);
                 renderTrademarkDashboard();
                 setTrademarkNote(
                     tmSearchState.results.length
                         ? `Loaded ${tmSearchState.results.length} trademark result${tmSearchState.results.length === 1 ? '' : 's'}.`
                         : (payload.message || 'No trademark records were found for this keyword.'),
-                    !tmSearchState.results.length
+                    false
                 );
             } catch (error) {
                 tmSearchState.results = [];
                 tmSearchState.filtered = [];
+                tmSearchState.searchCompleted = true;
+                tmSearchState.searchSucceeded = false;
                 renderTrademarkDashboard();
                 setTrademarkNote('Unable to fetch trademark data right now. Please try again.', true);
             } finally {
@@ -2540,6 +2537,7 @@
                 date,
                 imageUrl: item.image_url || '',
                 sourceUrl: item.source_url || '',
+                sourceType: item.source_type || 'third_party',
                 index,
             };
         }
@@ -2562,9 +2560,11 @@
         }
 
         function setTrademarkLoading(isLoading) {
+            tmSearchState.searchLoading = isLoading;
             tmEls['tm-loading'].hidden = !isLoading;
             tmEls['tm-search-submit'].disabled = isLoading;
             tmEls['tm-strip-submit'].disabled = isLoading;
+            updateAiProbabilityButton();
         }
 
         function setTrademarkNote(message, isError) {
@@ -2585,26 +2585,25 @@
 
         function updateAiProbabilityButton() {
             if (!tmEls['tm-ai-probability']) return;
-            tmEls['tm-ai-probability'].disabled = !tmSearchState.keyword.trim() || tmSearchState.results.length === 0;
-        }
-
-        function selectedTrademarkClass() {
-            const selected = [...tmSearchState.filters.classes].filter(value => value !== 'All Classes');
-            return selected.length === 1 ? selected[0] : '';
+            const enabled = tmSearchState.searchCompleted
+                && tmSearchState.searchSucceeded
+                && tmSearchState.keyword.trim().length >= 2
+                && !tmSearchState.searchLoading
+                && !tmSearchState.analysisLoading;
+            tmEls['tm-ai-probability'].disabled = !enabled;
         }
 
         function openTrademarkProbability() {
-            if (!tmSearchState.keyword.trim() || tmSearchState.results.length === 0) return;
+            if (!tmSearchState.searchCompleted || !tmSearchState.searchSucceeded || tmSearchState.keyword.trim().length < 2) return;
             tmProbabilityModal ??= new bootstrap.Modal(tmEls['tm-probability-modal']);
             tmEls['tm-probability-keyword'].textContent = tmSearchState.keyword;
-            tmEls['tm-probability-class'].value = selectedTrademarkClass();
             tmProbabilityModal.show();
             analyzeTrademarkProbability();
         }
 
         async function analyzeTrademarkProbability() {
-            if (!tmSearchState.keyword.trim() || tmSearchState.results.length === 0) {
-                showTrademarkProbabilityError('No trademark results are available to analyze.');
+            if (!tmSearchState.searchCompleted || !tmSearchState.searchSucceeded || tmSearchState.keyword.trim().length < 2) {
+                showTrademarkProbabilityError('Complete a valid trademark search before running the analysis.');
                 return;
             }
 
@@ -2617,6 +2616,8 @@
                 type: item.type || null,
                 proprietor: item.proprietor === 'Not available' ? null : item.proprietor,
                 description: item.description === 'No description available.' ? null : item.description,
+                application_date: item.dateLabel === '-' ? null : item.dateLabel,
+                source_type: item.sourceType,
             }));
 
             try {
@@ -2629,8 +2630,7 @@
                     },
                     body: JSON.stringify({
                         keyword: tmSearchState.keyword,
-                        class: tmEls['tm-probability-class'].value || null,
-                        proposed_description: tmEls['tm-proposed-description'].value.trim() || null,
+                        source_type: 'third_party',
                         data: records,
                     }),
                 });
@@ -2659,6 +2659,7 @@
         }
 
         function setTrademarkProbabilityLoading(isLoading) {
+            tmSearchState.analysisLoading = isLoading;
             tmEls['tm-probability-loading'].hidden = !isLoading;
             tmEls['tm-probability-error'].hidden = true;
             tmEls['tm-probability-content'].hidden = isLoading;
@@ -2676,27 +2677,19 @@
 
         function renderTrademarkProbability(analysis) {
             const insights = analysis.ai_insights;
-            const isPreliminary = analysis.analysis_mode === 'preliminary';
             tmEls['tm-probability-error'].hidden = true;
             tmEls['tm-probability-content'].hidden = false;
             tmEls['tm-probability-keyword'].textContent = analysis.keyword;
-            tmEls['tm-registration-chance'].textContent = isPreliminary ? 'Select class' : `${analysis.registration_probability}%`;
-            tmEls['tm-conflict-risk'].textContent = isPreliminary ? 'Not calculated' : `${analysis.conflict_risk}%`;
-            tmEls['tm-registration-chance'].closest('.tm-probability-score').classList.toggle('is-preliminary', isPreliminary);
+            tmEls['tm-registration-chance'].textContent = `${analysis.registration_probability}%`;
+            tmEls['tm-conflict-risk'].textContent = `${analysis.conflict_risk}%`;
             tmEls['tm-risk-level'].textContent = analysis.risk_level;
             tmEls['tm-risk-level'].className = `is-${analysis.risk_level.toLowerCase().replace(/\s+/g, '-')}`;
-            tmEls['tm-count-word'].textContent = analysis.exact_registered_word_marks;
-            tmEls['tm-count-device'].textContent = analysis.exact_registered_device_marks;
-            tmEls['tm-count-similar'].textContent = analysis.similar_registered_marks;
-            tmEls['tm-count-class'].textContent = analysis.same_class_registered_marks ?? 'Not checked';
-            tmEls['tm-count-same-class-word'].textContent = analysis.exact_same_class_word_marks ?? 0;
-            tmEls['tm-count-same-class-device'].textContent = analysis.exact_same_class_device_marks ?? 0;
-            tmEls['tm-highest-description-similarity'].textContent = analysis.highest_description_similarity === null
-                ? 'Not compared'
-                : `${analysis.highest_description_similarity}%`;
-            document.querySelectorAll('.tm-class-specific-count').forEach(card => card.hidden = isPreliminary);
-            tmEls['tm-hard-conflict-reason'].hidden = !analysis.hard_conflict;
-            tmEls['tm-hard-conflict-reason'].textContent = analysis.hard_conflict_reason || '';
+            tmEls['tm-confidence-score'].textContent = `${analysis.confidence_score}%`;
+            tmEls['tm-analysis-quality'].textContent = analysis.analysis_quality.replace(/^./, character => character.toUpperCase());
+            tmEls['tm-count-word'].textContent = analysis.exact_active_word_marks;
+            tmEls['tm-count-device'].textContent = analysis.exact_active_device_marks;
+            tmEls['tm-count-similar'].textContent = analysis.similar_active_marks;
+            tmEls['tm-count-class'].textContent = analysis.unique_active_classes;
             tmEls['tm-ai-summary'].textContent = insights.summary;
             renderTrademarkInsightReasons(insights.reasons);
             renderTrademarkInsightWarnings(insights.warnings);
@@ -2755,16 +2748,11 @@
                 showTrademarkProbabilityError('Charts could not be loaded. Please refresh the page and try again.');
                 return;
             }
-            const isPreliminary = analysis.analysis_mode === 'preliminary';
-            tmEls['tm-probability-overview-card'].hidden = isPreliminary;
-            tmEls['tm-probability-overview-card'].closest('.tm-probability-charts').classList.toggle('is-preliminary', isPreliminary);
-            if (!isPreliminary) {
-                tmProbabilityDoughnutChart = new ChartConstructor(document.getElementById('tm-probability-doughnut'), {
-                    type: 'doughnut',
-                    data: { labels: ['Registration Chance', 'Conflict Risk'], datasets: [{ data: [analysis.registration_probability, analysis.conflict_risk], backgroundColor: ['#0aa58f', '#ef5b62'], borderWidth: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom' } } },
-                });
-            }
+            tmProbabilityDoughnutChart = new ChartConstructor(document.getElementById('tm-probability-doughnut'), {
+                type: 'doughnut',
+                data: { labels: ['Registration Chance', 'Conflict Risk'], datasets: [{ data: [analysis.registration_probability, analysis.conflict_risk], backgroundColor: ['#0aa58f', '#ef5b62'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom' } } },
+            });
             const factors = analysis.factors.filter(factor => factor.score !== null);
             tmProbabilityFactorsChart = new ChartConstructor(document.getElementById('tm-probability-factors'), {
                 type: 'bar',
@@ -3003,6 +2991,8 @@
             tmSearchState.keyword = '';
             tmSearchState.results = [];
             tmSearchState.filtered = [];
+            tmSearchState.searchCompleted = false;
+            tmSearchState.searchSucceeded = false;
             if (tmEls['tm-search-keyword']) tmEls['tm-search-keyword'].value = '';
             if (tmEls['tm-results-keyword']) tmEls['tm-results-keyword'].value = '';
             if (tmEls['tm-results-shell']) tmEls['tm-results-shell'].hidden = true;
