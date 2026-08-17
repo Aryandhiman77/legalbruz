@@ -113,7 +113,7 @@
                 <tr>
                     <td>{{ $paymentLabel }} for trademark registration services</td>
                     <td>{{ $payment->transaction_id ?: ($payment->reference_number ?: 'N/A') }}</td>
-                    <td>{{ optional($payment->paid_at ?? $payment->created_at)->format('d M Y') }}</td>
+                    <td>{{ ($payment->paid_at ?? $payment->created_at)?->timezone('Asia/Kolkata')->format('d M Y') }}</td>
                     <td class="text-right">INR {{ number_format((float) $payment->amount, 2) }}</td>
                 </tr>
             </tbody>

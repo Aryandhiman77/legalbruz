@@ -1057,6 +1057,16 @@ class TrademarkOppositionController extends Controller
         if ($request->filled('status')) {
             $query->where('current_admin_status', $request->status);
         }
+        if ($request->filled('search')) {
+            $search = '%'.trim((string) $request->string('search')).'%';
+            $query->where(function ($query) use ($search) {
+                $query->where('case_number', 'like', $search)
+                    ->orWhere('application_number', 'like', $search)
+                    ->orWhere('applicant_name', 'like', $search)
+                    ->orWhere('email', 'like', $search)
+                    ->orWhere('trademark_name', 'like', $search);
+            });
+        }
 
         return view('admin.trademark-opposition.index', [
             'cases' => $query->paginate(20)->withQueryString(),
@@ -1074,6 +1084,17 @@ class TrademarkOppositionController extends Controller
 
         if ($request->filled('status')) {
             $query->where('current_admin_status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = '%'.trim((string) $request->string('search')).'%';
+            $query->where(function ($query) use ($search) {
+                $query->where('case_number', 'like', $search)
+                    ->orWhere('opposed_application_number', 'like', $search)
+                    ->orWhere('user_business_name', 'like', $search)
+                    ->orWhere('email', 'like', $search)
+                    ->orWhere('trademark_you_own', 'like', $search)
+                    ->orWhere('trademark_to_oppose', 'like', $search);
+            });
         }
 
         return view('admin.trademark-opposition.oppose-index', [

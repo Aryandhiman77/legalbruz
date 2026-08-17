@@ -33,12 +33,33 @@
             </div>
         @endif
 
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <form method="GET" action="{{ route('admin.applications') }}" class="d-flex gap-2 flex-wrap">
+                    <input name="search" class="form-control form-control-sm flex-grow-1"
+                        style="min-width:220px" value="{{ request('search') }}"
+                        placeholder="Search applicant, email, trademark, or application number">
+                    <select name="status" class="form-select form-select-sm" style="max-width:220px">
+                        <option value="">All statuses</option>
+                        @foreach ($pendingStatuses as $value => $label)
+                            <x-admin-status-option :value="$value" :label="$label"
+                                :selected="request('status') === $value" />
+                        @endforeach
+                    </select>
+                    <button class="btn btn-primary btn-sm" type="submit">Search &amp; filter</button>
+                    @if (request()->hasAny(['search', 'status']))
+                        <a href="{{ route('admin.applications') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    @endif
+                </form>
+            </div>
+        </div>
+
         <!-- Applications Table -->
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 @if ($applications->count() > 0)
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table class="table table-hover align-middle admin-list-table">
                             <thead style="background-color: #f8f9fa; border-bottom: 2px solid #2A9D8F;">
                                 <tr>
                                     <th style="color: #1D3557; font-weight: 600;">ID</th>
@@ -68,7 +89,7 @@
                                             <small class="text-muted">{{ $app->user->email ?? 'N/A' }}</small>
                                         </td>
                                         <td>
-                                            <small>{{ $app->created_at->format('M d, Y') }}</small>
+                                            <small>{{ $app->created_at->timezone('Asia/Kolkata')->format('M d, Y') }}</small>
                                         </td>
                                         <td>
                                             @php
@@ -76,7 +97,7 @@
                                                     ? 'Registered'
                                                     : $app->status_label;
                                             @endphp
-                                            <span class="badge bg-light text-dark border">{{ $adminStatusLabel }}</span>
+                                            <x-admin-status :status="$adminStatusLabel" />
                                         </td>
                                         <td>
                                             <a href="{{ route('admin.review-application', $app->id) }}"

@@ -33,7 +33,7 @@
             @if ($status === 'approved')
                 <tr>
                     <th>Date</th>
-                    <td>{{ $payment->paid_at?->format('d M Y, h:i A') ?? now()->format('d M Y, h:i A') }}</td>
+                    <td>{{ $payment->paid_at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') ?? now('Asia/Kolkata')->format('d M Y, h:i A') }}</td>
                 </tr>
             @endif
             <tr>

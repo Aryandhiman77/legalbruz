@@ -11,27 +11,27 @@ class TrademarkScraperController extends Controller
     {
         $request->validate([
             'keyword' => 'required|string|max:100',
+            'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
         $keyword = $request->keyword;
+        $limit = $request->limit ?? 20;
 
-        $results = $scraper->scrapeWithoutBrowser($keyword);
+        try {
+            $results = $scraper->scrapeTrademark($keyword, $limit);
 
-        if (count($results) === 0) {
             return response()->json([
                 'success' => true,
-                'message' => 'No matching record was found in the available search data.',
                 'keyword' => $keyword,
-                'total' => 0,
-                'data' => [],
+                'total' => count($results),
+                'data' => $results,
             ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trademark scraping failed.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'keyword' => $keyword,
-            'total' => count($results),
-            'data' => $results,
-        ]);
     }
 }

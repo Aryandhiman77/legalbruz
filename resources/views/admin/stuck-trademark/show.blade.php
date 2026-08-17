@@ -2,6 +2,7 @@
 
 @section('content')
     @php
+        $displayTimezone = 'Asia/Kolkata';
         $latestDocumentsByType = $case->documents->sortByDesc('id')->unique('document_type')->values();
         $latestDocumentIdsByType = $latestDocumentsByType->pluck('id', 'document_type');
         $documentTypeLabels = [
@@ -846,7 +847,7 @@
                             <div class="col-md-6"><div class="data-block"><span class="data-label">Trademark Class</span><div class="data-value">{{ $case->trademark_class ?: 'Not provided' }}</div></div></div>
                             <div class="col-md-6"><div class="data-block"><span class="data-label">Filing Date</span><div class="data-value">{{ $case->filing_date ? $case->filing_date->format('M d, Y') : 'Not provided' }}</div></div></div>
                             <div class="col-md-6"><div class="data-block"><span class="data-label">Registry Status</span><div class="data-value">{{ $formatStatusValue($case->registry_status) }}</div></div></div>
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Submitted</span><div class="data-value">{{ $case->created_at->format('M d, Y h:i A') }}</div></div></div>
+                            <div class="col-md-6"><div class="data-block"><span class="data-label">Submitted</span><div class="data-value">{{ $case->created_at->timezone($displayTimezone)->format('M d, Y h:i A') }}</div></div></div>
                         </div>
 
                         <h6 class="overview-section-title">Recovery Application Documents</h6>
@@ -863,7 +864,7 @@
                                                 <span class="overview-document-review-link">{{ $documentTypeLabel }}</span>
                                                 <span class="d-block small text-muted">{{ $document->file_name }}{{ $isCurrentDocument ? '' : ' | Archived version' }}</span>
                                             </span>
-                                            <span class="overview-document-meta">Review | {{ $document->created_at->format('d M Y') }}</span>
+                                            <span class="overview-document-meta">Review | {{ $document->created_at->timezone($displayTimezone)->format('d M Y') }}</span>
                                         </a>
                                     </li>
                                 @endforeach
@@ -1036,14 +1037,14 @@
                 </div>
 
                 <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white">
+                    <div class="card-header admin-card-header">
                         <h5 class="mb-0">Activity</h5>
                     </div>
                     <div class="card-body">
                         @forelse ($case->statusLogs as $log)
                             <div class="border-start border-3 ps-3 pb-3">
                                 <div class="fw-bold">{{ $log->title }}</div>
-                                <small class="text-muted">{{ $log->created_at->format('d M Y, h:i A') }} | {{ \App\Support\StuckTrademarkWorkflow::label($log->to_status) }}</small>
+                                <small class="text-muted">{{ $log->created_at->timezone($displayTimezone)->format('d M Y, h:i A') }} | {{ \App\Support\StuckTrademarkWorkflow::label($log->to_status) }}</small>
                                 @if ($log->message)
                                     <p class="mb-0 mt-1">{{ $log->message }}</p>
                                 @endif
@@ -1207,7 +1208,7 @@
                                 </div>
                                 <div class="mb-3" data-monitoring-active-only>
                                     <label class="form-label">Next Follow-up</label>
-                                    <input type="datetime-local" name="next_follow_up_at" class="form-control @error('next_follow_up_at') is-invalid @enderror" value="{{ old('next_follow_up_at', optional($case->next_follow_up_at)->format('Y-m-d\TH:i')) }}">
+                                    <input type="datetime-local" name="next_follow_up_at" class="form-control @error('next_follow_up_at') is-invalid @enderror" value="{{ old('next_follow_up_at', $case->next_follow_up_at?->timezone($displayTimezone)->format('Y-m-d\TH:i')) }}">
                                     @error('next_follow_up_at')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -1258,7 +1259,7 @@
                                     <div class="monitoring-update-history-item">
                                         <div class="monitoring-update-history-head">
                                             <span class="monitoring-update-history-name">{{ $update->title }}</span>
-                                            <span class="monitoring-update-history-date">{{ $update->created_at->format('d M Y, h:i A') }}</span>
+                                            <span class="monitoring-update-history-date">{{ $update->created_at->timezone($displayTimezone)->format('d M Y, h:i A') }}</span>
                                         </div>
                                         @if ($update->note)
                                             <p class="monitoring-update-history-note"><strong>Admin Note:</strong> {{ $update->note }}</p>

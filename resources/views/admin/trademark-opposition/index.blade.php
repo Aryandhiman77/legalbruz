@@ -11,18 +11,23 @@
                 <p class="text-muted mb-0">Flow A: Defend My Trademark</p>
             </div>
             <form class="admin-filter" method="GET">
+                <input class="admin-input" name="search" value="{{ request('search') }}"
+                    placeholder="Search case, client, or trademark">
                 <select class="admin-input" name="status">
                     <option value="">All statuses</option>
                     @foreach ($statuses as $status)
-                        <option value="{{ $status }}" @selected($selectedStatus === $status)>{{ $status }}</option>
+                        <x-admin-status-option :value="$status" :selected="$selectedStatus === $status" />
                     @endforeach
                 </select>
                 <button class="admin-btn" type="submit">Filter</button>
+                @if (request()->hasAny(['search', 'status']))
+                    <a class="btn btn-outline-secondary btn-sm" href="{{ route('admin.trademark-opposition.index') }}">Clear</a>
+                @endif
             </form>
         </div>
         <div class="admin-card table-responsive">
-            <table class="table admin-table align-middle">
-                <thead><tr><th>Case</th><th>User</th><th>Trademark</th><th>Deadline</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+            <table class="table admin-table align-middle admin-list-table">
+                <thead><tr><th>Case</th><th>User</th><th>Trademark</th><th>Deadline</th><th>Status</th><th>Payment</th><th>Updated</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($cases as $case)
                         <tr>
@@ -30,12 +35,13 @@
                             <td>{{ $case->applicant_name }}<br><small>{{ $case->email }}</small></td>
                             <td>{{ $case->trademark_name }}<br><small>Class {{ $case->trademark_class }}</small></td>
                             <td>{{ $case->counter_statement_deadline->format('d M Y') }}<br><small>{{ $case->deadline_status_label }}</small></td>
-                            <td><span class="admin-status">{{ $case->current_admin_status }}</span></td>
-                            <td>{{ ucfirst($case->payment_status) }}</td>
+                            <td><x-admin-status :status="$case->current_admin_status" /></td>
+                            <td><x-admin-status :status="$case->payment_status" /></td>
+                            <td><x-admin-date-time :value="$case->updated_at" /></td>
                             <td><a class="admin-btn" href="{{ route('admin.trademark-opposition.show', $case) }}">Open</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-muted py-4">No opposition defence cases found.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">No opposition defence cases found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

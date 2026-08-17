@@ -159,7 +159,13 @@
                 $statusRank[$status] = $index;
             }
         }
-        $currentRank = $statusRank[$case->status] ?? 0;
+        $timelineStatus = \App\Support\StuckTrademarkWorkflow::effectiveStatus(
+            $case->status,
+            $case->execution_completed_at,
+            $case->resolved_at,
+            $case->closed_at,
+        );
+        $currentRank = $statusRank[$timelineStatus] ?? 0;
         $effectiveRank = $currentRank;
 
         if ($case->audit_payment_status === 'paid') {
@@ -302,15 +308,17 @@
         $executionIsComplete = (bool) $case->execution_completed_at || $executionSubStage === 'execution_completed';
 
         if ($executionIsComplete) {
+            $visibleExecutionSubStage = 'execution_completed';
+            $executionSubStageIndex = array_search($visibleExecutionSubStage, $executionSubStageOrder, true);
             $effectiveRank = max($effectiveRank, $statusRank[\App\Support\StuckTrademarkWorkflow::MONITORING] ?? $effectiveRank);
         }
 
-        $resolvedIsActive = in_array($case->status, [
+        $resolvedIsActive = in_array($timelineStatus, [
             \App\Support\StuckTrademarkWorkflow::RESOLVED,
             \App\Support\StuckTrademarkWorkflow::CLOSED,
         ], true);
         $monitoringIsActive = ! $resolvedIsActive && ($executionIsComplete
-            || in_array($case->status, [
+            || in_array($timelineStatus, [
                 \App\Support\StuckTrademarkWorkflow::MONITORING,
             ], true));
         $monitoringUpdates = $case->executionUpdates
@@ -1041,6 +1049,14 @@
 
         .recovery-side-card .card-body {
             padding: 14px 16px !important;
+        }
+
+        .activity-log-card .card-header {
+            background: #27466d !important;
+        }
+
+        .activity-log-card .card-header h5 {
+            color: #ffffff !important;
         }
 
         .side-card-header-icon {
@@ -3090,7 +3106,7 @@
                 <h2 class="mb-1">{{ $case->trademark_name }}</h2>
                 <p class="text-muted mb-0">{{ $case->case_number }} · Application {{ $case->application_number ?: 'not provided' }}</p>
             </div>
-            <span class="badge bg-{{ $statusColors[$case->status] ?? 'secondary' }} fs-6">{{ $case->status_label }}</span>
+            <span class="badge bg-{{ $statusColors[$timelineStatus] ?? 'secondary' }} fs-6">{{ \App\Support\StuckTrademarkWorkflow::label($timelineStatus) }}</span>
         </div>
 
         <div class="row g-4">
@@ -3108,7 +3124,7 @@
                             </div>
                         </div>
                         <div class="timeline-head-actions">
-                            <span class="registry-pill is-status">{{ $case->status_label }}</span>
+                            <span class="registry-pill is-status">{{ \App\Support\StuckTrademarkWorkflow::label($timelineStatus) }}</span>
                             <span class="registry-pill">Registry: {{ $case->registry_status ?: 'Not Filed' }}</span>
                         </div>
                     </div>
@@ -3121,13 +3137,13 @@
                                 $formattedDate = $dateValue
                                     ? ($dateValue instanceof \Carbon\CarbonInterface ? $dateValue->copy() : \Illuminate\Support\Carbon::parse($dateValue))->timezone($displayTimezone)->format('d M Y, h:i A')
                                     : null;
-                                $isCurrent = in_array($case->status, $step['statuses'], true) && $stepRank === $effectiveRank;
+                                $isCurrent = in_array($timelineStatus, $step['statuses'], true) && $stepRank === $effectiveRank;
                                 $isCompleted = !$isCurrent && $stepRank < $effectiveRank;
                                 if ($step['label'] === 'Documents Verified' && $allUploadedVerificationDocumentsVerified) {
                                     $isCurrent = false;
                                     $isCompleted = true;
                                 }
-                                if ($step['label'] === 'Resolved & Closed' && $case->status === \App\Support\StuckTrademarkWorkflow::CLOSED) {
+                                if ($step['label'] === 'Resolved & Closed' && $timelineStatus === \App\Support\StuckTrademarkWorkflow::CLOSED) {
                                     $isCurrent = false;
                                     $isCompleted = true;
                                 }
@@ -3197,10 +3213,11 @@
                                         @foreach ($executionSubSteps as $subKey => $subStep)
                                             @php
                                                 $subIndex = array_search($subKey, $executionSubStageOrder, true);
-                                                $subCompleted = $executionSubStageIndex > $subIndex
+                                                $subCompleted = $executionIsComplete
+                                                    || $executionSubStageIndex > $subIndex
                                                     || ($subKey === 'execution_started' && $case->execution_started_at)
                                                     || ($subKey === 'execution_completed' && $case->execution_completed_at);
-                                                $subCurrent = $executionSubStageIndex === $subIndex;
+                                                $subCurrent = ! $executionIsComplete && $executionSubStageIndex === $subIndex;
                                                 $subUpdate = $case->executionUpdates->firstWhere('stage', $subStep['label']);
                                                 $subDate = $subUpdate?->created_at
                                                     ? $subUpdate->created_at->timezone($displayTimezone)->format('d M Y, h:i A')
@@ -3804,7 +3821,7 @@
                                                     : number_format($sizeInKb) . ' KB';
                                                 $documentTypeLabel = $documentTypeOptions[$document->document_type] ?? ucwords(str_replace('_', ' ', $document->document_type));
                                             @endphp
-                                            <tr data-document-row data-search-text="{{ strtolower($document->file_name . ' ' . $displaySize . ' ' . $documentTypeLabel . ' ' . $documentStatus . ' ' . $document->created_at->format('d M Y h:i A')) }}">
+                                            <tr data-document-row data-search-text="{{ strtolower($document->file_name . ' ' . $displaySize . ' ' . $documentTypeLabel . ' ' . $documentStatus . ' ' . $document->created_at->timezone($displayTimezone)->format('d M Y h:i A')) }}">
                                                 <td>
                                                     <div class="document-file-cell">
                                                         <span class="document-file-icon"><x-lucide-file-text /></span>
@@ -3820,7 +3837,7 @@
                                                 <td>
                                                     <span class="document-date-cell">
                                                         <x-lucide-calendar />
-                                                        <span>{{ $document->created_at->format('d M Y') }}<br>{{ $document->created_at->format('h:i A') }}</span>
+                                                        <span>{{ $document->created_at->timezone($displayTimezone)->format('d M Y') }}<br>{{ $document->created_at->timezone($displayTimezone)->format('h:i A') }}</span>
                                                     </span>
                                                 </td>
                                                 <td>
@@ -3876,7 +3893,7 @@
                                             ? number_format($sizeInKb / 1024, 1) . ' MB'
                                             : number_format($sizeInKb) . ' KB';
                                         $documentTypeLabel = $documentTypeOptions[$document->document_type] ?? ucwords(str_replace('_', ' ', $document->document_type));
-                                        $documentSearchText = strtolower($document->file_name . ' ' . $displaySize . ' ' . $documentTypeLabel . ' ' . $documentStatus . ' ' . $document->created_at->format('d M Y h:i A'));
+                                        $documentSearchText = strtolower($document->file_name . ' ' . $displaySize . ' ' . $documentTypeLabel . ' ' . $documentStatus . ' ' . $document->created_at->timezone($displayTimezone)->format('d M Y h:i A'));
                                     @endphp
                                     <article class="documents-mobile-card" data-document-card data-search-text="{{ $documentSearchText }}">
                                         <div class="documents-mobile-head">
@@ -3915,7 +3932,7 @@
                                             </div>
                                             <div class="documents-mobile-meta-item">
                                                 <span>Uploaded On</span>
-                                                <strong>{{ $document->created_at->format('d M Y') }} {{ $document->created_at->format('h:i A') }}</strong>
+                                                <strong>{{ $document->created_at->timezone($displayTimezone)->format('d M Y') }} {{ $document->created_at->timezone($displayTimezone)->format('h:i A') }}</strong>
                                             </div>
                                         </div>
                                     </article>
@@ -3938,15 +3955,15 @@
                     </div>
                 </section>
 
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white">
+                <div class="card shadow-sm border-0 activity-log-card">
+                    <div class="card-header">
                         <h5 class="mb-0">Activity Log</h5>
                     </div>
                     <div class="card-body">
                         @forelse ($case->statusLogs as $log)
                             <div class="border-start border-3 ps-3 pb-3">
                                 <div class="fw-bold">{{ $log->title }}</div>
-                                <small class="text-muted">{{ $log->created_at->format('d M Y, h:i A') }} · {{ \App\Support\StuckTrademarkWorkflow::label($log->to_status) }}</small>
+                                <small class="text-muted">{{ $log->created_at->timezone($displayTimezone)->format('d M Y, h:i A') }} · {{ \App\Support\StuckTrademarkWorkflow::label($log->to_status) }}</small>
                                 @if ($log->message)
                                     <p class="mb-0 mt-1">{{ $log->message }}</p>
                                 @endif

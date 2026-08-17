@@ -492,9 +492,9 @@
                                         @enderror
                                     </div>
                                     <div class="col-12">
-                                        <label for="trademark_origin_description" class="form-label required">A Brief Description of the Origin of the Trademark</label>
+                                        <label for="trademark_origin_description" class="form-label">A Brief Description of the Origin of the Trademark</label>
                                         <textarea id="trademark_origin_description" name="trademark_origin_description" rows="3"
-                                            class="form-control @error('trademark_origin_description') is-invalid @enderror" required>{{ old('trademark_origin_description', $trademark['origin_of_trademark'] ?? $application->description ?? '') }}</textarea>
+                                            class="form-control @error('trademark_origin_description') is-invalid @enderror">{{ old('trademark_origin_description', $trademark['origin_of_trademark'] ?? $application->description ?? '') }}</textarea>
                                         @error('trademark_origin_description')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -579,10 +579,10 @@
                                         @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="proof_of_use" class="form-label required">Proof of Use of Trademark</label>
+                                        <label for="proof_of_use" class="form-label">Proof of Use of Trademark</label>
                                         <input type="file" id="proof_of_use" name="proof_of_use"
                                             class="form-control @error('proof_of_use') is-invalid @enderror"
-                                            accept=".pdf,image/png,image/jpeg,image/jpg,image/webp" {{ $hasCurrentProofOfUse ? '' : 'required' }}>
+                                            accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
                                         @error('proof_of_use')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror

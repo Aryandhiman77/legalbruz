@@ -1947,7 +1947,7 @@ body.trademark-search-page .tm-results-shell {
     margin-bottom: 20px;
 }
 
-.tm-probability-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tm-probability-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .tm-probability-summary > div,
 .tm-probability-counts > div,
@@ -1985,7 +1985,6 @@ body.trademark-search-page .tm-results-shell {
 
 .tm-probability-score.is-registration strong { color: #078d80; }
 .tm-probability-score.is-conflict strong { color: #dc454e; }
-.tm-probability-confidence strong { color: #325d88; }
 .tm-probability-level strong { display: inline-flex; padding: 7px 13px; border-radius: 999px; font-size: 0.9rem; }
 .tm-probability-level strong.is-low { color: #087c49; background: #dff6e6; }
 .tm-probability-level strong.is-medium,
@@ -3546,5 +3545,160 @@ footer {
 
     body.tm-mobile-filters-open {
         overflow: hidden;
+    }
+}
+
+/* Mobile trademark search: simple input + Search, with readable AI button. */
+@media (max-width: 767px) {
+    body.trademark-search-page .tm-search-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: stretch;
+        padding: 0;
+        margin-bottom: 20px;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    body.trademark-search-page .tm-search-strip::before,
+    body.trademark-search-page .tm-search-type,
+    body.trademark-search-page .tm-clear-inline {
+        display: none !important;
+    }
+
+    body.trademark-search-page .tm-search-strip input {
+        grid-column: 1;
+        min-height: 54px;
+        width: 100%;
+        padding: 0 16px;
+        border: 1px solid #d7e3ee;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 10px 24px rgba(29, 53, 87, 0.06);
+        font-size: 1rem;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    body.trademark-search-page .tm-strip-submit,
+    body.trademark-search-page .tm-ai-probability-button {
+        position: static;
+        inset: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        min-width: 104px;
+        height: 54px;
+        margin: 0;
+        padding: 0 18px;
+        border-radius: 16px;
+        white-space: nowrap;
+    }
+
+    body.trademark-search-page .tm-strip-submit {
+        grid-column: 2;
+    }
+
+    body.trademark-search-page .tm-ai-probability-button {
+        grid-column: 1 / -1;
+        justify-self: start;
+        min-width: 178px;
+        background: linear-gradient(135deg, #6b5cff 0%, #5437df 100%);
+        box-shadow: 0 12px 24px rgba(84, 55, 223, 0.22);
+    }
+
+    body.trademark-search-page .tm-ai-probability-button span {
+        display: inline !important;
+    }
+}
+
+@media (max-width: 767px) {
+    body.trademark-search-page .tm-results-header h3 {
+        font-size: 0;
+        line-height: 1;
+        margin-bottom: 0;
+    }
+
+    body.trademark-search-page .tm-results-header h3::after {
+        content: "Search";
+        display: block;
+        color: var(--navy);
+        font-size: 2.15rem;
+        line-height: 1.05;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+    }
+
+    body.trademark-search-page .tm-results-header p {
+        display: none;
+    }
+}
+
+.tm-probability-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.tm-probability-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    font-weight: 800;
+}
+
+@media (max-width: 767px) {
+    .tm-probability-actions {
+        justify-content: stretch;
+        width: 100%;
+    }
+
+    .tm-probability-actions .btn {
+        flex: 1 1 100%;
+    }
+}
+
+/* Keep mobile filters from blocking search/results until explicitly opened. */
+.tm-mobile-filter-trigger {
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    body.trademark-search-page .tm-mobile-filter-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 52px;
+        margin: 0 0 18px;
+        border: 1px solid #dbe6f1;
+        border-radius: 16px;
+        background: #ffffff;
+        color: #078d80;
+        font-weight: 900;
+        box-shadow: 0 10px 24px rgba(29, 53, 87, 0.06);
+    }
+
+    body.trademark-search-page .tm-refine-panel {
+        transform: translate3d(0, calc(100% + 28px), 0) !important;
+        pointer-events: none;
+    }
+
+    body.trademark-search-page .tm-results-shell.is-mobile-filters-open .tm-refine-panel {
+        transform: translate3d(0, 0, 0) !important;
+        pointer-events: auto;
+    }
+
+    body.trademark-search-page .tm-results-shell:not(.is-mobile-filters-open) .tm-mobile-filter-backdrop {
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 }

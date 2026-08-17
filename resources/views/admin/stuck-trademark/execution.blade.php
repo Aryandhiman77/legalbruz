@@ -16,6 +16,11 @@
         $subStageOrder = array_keys($subSteps);
         $currentSubStageIndex = array_search($visibleSubStage, $subStageOrder, true);
         $currentSubStageIndex = $currentSubStageIndex === false ? -1 : $currentSubStageIndex;
+        $executionIsComplete = (bool) $case->execution_completed_at || $subStage === 'execution_completed';
+        if ($executionIsComplete) {
+            $visibleSubStage = 'execution_completed';
+            $currentSubStageIndex = array_search($visibleSubStage, $subStageOrder, true);
+        }
     @endphp
 
     <style>
@@ -89,8 +94,10 @@
                         @foreach ($subSteps as $key => $step)
                             @php
                                 $index = array_search($key, $subStageOrder, true);
-                                $isCompleted = $currentSubStageIndex > $index || ($key === 'execution_started' && $case->execution_started_at);
-                                $isCurrent = $currentSubStageIndex === $index;
+                                $isCompleted = $executionIsComplete
+                                    || $currentSubStageIndex > $index
+                                    || ($key === 'execution_started' && $case->execution_started_at);
+                                $isCurrent = ! $executionIsComplete && $currentSubStageIndex === $index;
                             @endphp
                             <div class="execution-substep {{ $isCompleted ? 'is-completed' : '' }} {{ $isCurrent ? 'is-current' : '' }}">
                                 <span class="execution-substep-icon"><x-dynamic-component :component="'lucide-' . $step['icon']" /></span>

@@ -895,6 +895,73 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="dashboard-mobile-cards">
+                                @foreach ($trademarkOppositionCases as $oppositionCase)
+                                    @php
+                                        $deadlineClass = match ($oppositionCase->deadline_status) {
+                                            'green' => 'status-green',
+                                            'yellow' => 'status-orange',
+                                            default => 'status-red',
+                                        };
+                                        $needsOppositionDocuments = !$oppositionCase->hasRequiredDocuments();
+                                        $hasOppositionDraftForApproval = filled($oppositionCase->draft_path)
+                                            && $oppositionCase->client_approval_status !== 'approved';
+                                    @endphp
+                                    <article class="dashboard-mobile-card dashboard-application-card">
+                                        <div class="dashboard-mobile-card-head">
+                                            <div class="dashboard-application-title">
+                                                <div class="dashboard-mobile-card-main">
+                                                    <span class="dashboard-primary-text">{{ $oppositionCase->trademark_name }}</span>
+                                                    <span class="dashboard-subtext">{{ $oppositionCase->case_number }} · {{ $oppositionCase->application_number }}</span>
+                                                </div>
+                                            </div>
+                                            <span class="dashboard-badge dashboard-application-status status-blue">
+                                                {{ $oppositionCase->current_client_stage }}
+                                            </span>
+                                        </div>
+                                        <div class="dashboard-application-detail-list">
+                                            <div class="dashboard-application-detail">
+                                                <div class="dashboard-application-copy">
+                                                    <span>Deadline</span>
+                                                    <strong class="{{ $deadlineClass }}">{{ $oppositionCase->counter_statement_deadline->format('d M Y') }}</strong>
+                                                </div>
+                                            </div>
+                                            <div class="dashboard-application-detail">
+                                                <div class="dashboard-application-copy">
+                                                    <span>Risk</span>
+                                                    <strong>{{ $oppositionCase->risk_level ?: 'Pending' }}</strong>
+                                                </div>
+                                            </div>
+                                            <div class="dashboard-application-detail">
+                                                <div class="dashboard-application-copy">
+                                                    <span>Payment</span>
+                                                    <strong>{{ ucfirst($oppositionCase->payment_status) }}</strong>
+                                                </div>
+                                            </div>
+                                            <div class="dashboard-application-detail">
+                                                <div class="dashboard-application-copy">
+                                                    <span>Application</span>
+                                                    <strong>{{ $oppositionCase->application_number }}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-mobile-actions">
+                                            @if ($needsOppositionDocuments)
+                                                <a href="{{ route('trademark-opposition.action-center', $oppositionCase) }}" class="dashboard-action-btn btn-onboarding">
+                                                    <i class="fas fa-cloud-upload-alt"></i> Upload Documents
+                                                </a>
+                                            @elseif ($hasOppositionDraftForApproval)
+                                                <a href="{{ route('trademark-opposition.action-center', $oppositionCase) }}" class="dashboard-action-btn btn-onboarding">
+                                                    <i class="fas fa-file-signature"></i> Review Documents
+                                                </a>
+                                            @endif
+                                            <a href="{{ route('trademark-opposition.show', $oppositionCase) }}" class="dashboard-action-btn btn-track">
+                                                <i class="fas fa-crosshairs"></i> Track
+                                            </a>
+                                        </div>
+                                    </article>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -926,7 +993,56 @@
                                     @endforeach
                                 </tbody>
                             </table>
-                        </div></div>
+                        </div>
+                        <div class="dashboard-mobile-cards">
+                            @foreach ($trademarkOpposeCases as $oppositionCase)
+                                <article class="dashboard-mobile-card dashboard-application-card">
+                                    <div class="dashboard-mobile-card-head">
+                                        <div class="dashboard-application-title">
+                                            <div class="dashboard-mobile-card-main">
+                                                <span class="dashboard-primary-text">{{ $oppositionCase->trademark_you_own }}</span>
+                                                <span class="dashboard-subtext">{{ $oppositionCase->case_number }} · {{ $oppositionCase->opposed_application_number }}</span>
+                                            </div>
+                                        </div>
+                                        <span class="dashboard-badge dashboard-application-status status-blue">
+                                            {{ $oppositionCase->current_client_stage }}
+                                        </span>
+                                    </div>
+                                    <div class="dashboard-application-detail-list">
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Trademark opposed</span>
+                                                <strong>{{ $oppositionCase->trademark_to_oppose }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Recommendation</span>
+                                                <strong>{{ $oppositionCase->recommendation_level ?: 'Pending' }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Payment</span>
+                                                <strong>{{ ucfirst($oppositionCase->payment_status) }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Application</span>
+                                                <strong>{{ $oppositionCase->opposed_application_number }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="dashboard-mobile-actions">
+                                        <a href="{{ route('trademark-opposition.oppose.show', $oppositionCase) }}" class="dashboard-action-btn btn-track">
+                                            <i class="fas fa-crosshairs"></i> Open Case
+                                        </a>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -964,7 +1080,63 @@
                                     @endforeach
                                 </tbody>
                             </table>
-                        </div></div>
+                        </div>
+                        <div class="dashboard-mobile-cards">
+                            @foreach ($examinationReplyCases as $replyCase)
+                                @php
+                                    $deadlineClass = match ($replyCase->deadline_status) {
+                                        'green' => 'status-green',
+                                        'yellow' => 'status-orange',
+                                        default => 'status-red',
+                                    };
+                                @endphp
+                                <article class="dashboard-mobile-card dashboard-application-card">
+                                    <div class="dashboard-mobile-card-head">
+                                        <div class="dashboard-application-title">
+                                            <div class="dashboard-mobile-card-main">
+                                                <span class="dashboard-primary-text">{{ $replyCase->trademark_name }}</span>
+                                                <span class="dashboard-subtext">{{ $replyCase->case_number }} · {{ $replyCase->application_number }}</span>
+                                            </div>
+                                        </div>
+                                        <span class="dashboard-badge dashboard-application-status status-blue">
+                                            {{ $replyCase->current_client_stage }}
+                                        </span>
+                                    </div>
+                                    <div class="dashboard-application-detail-list">
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Deadline</span>
+                                                <strong class="{{ $deadlineClass }}">{{ $replyCase->reply_deadline->format('d M Y') }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Risk</span>
+                                                <strong>{{ $replyCase->risk_level ?: 'Pending' }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Payment</span>
+                                                <strong>{{ ucfirst($replyCase->payment_status) }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-application-detail">
+                                            <div class="dashboard-application-copy">
+                                                <span>Application</span>
+                                                <strong>{{ $replyCase->application_number }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="dashboard-mobile-actions">
+                                        <a href="{{ route('examination-reply.show', $replyCase) }}" class="dashboard-action-btn btn-track">
+                                            <i class="fas fa-crosshairs"></i> Open Case
+                                        </a>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1139,7 +1311,7 @@
                                             <div class="dashboard-application-detail">
                                                 <div class="dashboard-application-copy">
                                                     <span>Updated</span>
-                                                    <strong>{{ $recoveryCase->updated_at->format('d M Y') }}</strong>
+                                                    <strong>{{ $recoveryCase->updated_at->timezone('Asia/Kolkata')->format('d M Y') }}</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -1254,7 +1426,7 @@
                                                             Pending</span>
                                                     @endif
                                                 </td>
-                                                <td><i class="far fa-calendar-alt text-muted me-1"></i>{{ $app->created_at->format('d M Y') }}</td>
+                                                <td><i class="far fa-calendar-alt text-muted me-1"></i>{{ $app->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</td>
                                                 <td>
                                                     <div class="dashboard-actions">
                                                         @if ($app->current_status === $workflow::DRAFT)
@@ -1388,7 +1560,7 @@
                                             <div class="dashboard-application-detail">
                                                 <div class="dashboard-application-copy">
                                                     <span>Created</span>
-                                                    <strong>{{ $app->created_at->format('d M Y') }}</strong>
+                                                    <strong>{{ $app->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</strong>
                                                 </div>
                                             </div>
                                         </div>

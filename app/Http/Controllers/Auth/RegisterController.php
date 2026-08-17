@@ -54,7 +54,11 @@ class RegisterController extends Controller
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'mobile' => ['required', 'string', 'regex:/^(?:(?:\+?91)|0)?[6-9][0-9]{9}$/'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'mobile.required' => 'An Indian mobile number is required.',
+            'mobile.regex' => 'Enter a valid Indian mobile number starting with 6, 7, 8, or 9.',
         ]);
     }
 
@@ -68,6 +72,7 @@ class RegisterController extends Controller
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
+            'mobile' => $this->normalizeIndianMobile($data['mobile']),
             'password' => Hash::make($data['password']),
         ]);
 
@@ -82,5 +87,20 @@ class RegisterController extends Controller
         }
 
         return $user;
+    }
+
+    private function normalizeIndianMobile(string $mobile): string
+    {
+        $digits = preg_replace('/\D+/', '', $mobile);
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            return substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+            return substr($digits, 1);
+        }
+
+        return $digits;
     }
 }

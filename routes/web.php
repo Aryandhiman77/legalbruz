@@ -13,24 +13,45 @@ use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\StuckTrademarkController;
 use App\Http\Controllers\AdminTrademarkExecutionController;
 use App\Http\Controllers\AdminDiscountCouponController;
+use App\Http\Controllers\AdminTrademarkPricingController;
 use App\Http\Controllers\PostalCodeLookupController;
 use App\Http\Controllers\TrademarkOppositionController;
 use App\Http\Controllers\ExaminationReportReplyController;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\TrademarkScraperController;
 use App\Http\Controllers\TrademarkProbabilityController;
+use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\AdminFaqController;
+use App\Http\Controllers\AdminContactMessageController;
+use App\Http\Controllers\CareerController;
+use App\Http\Controllers\AdminCareerJobController;
+use App\Http\Controllers\AdminCareerApplicationController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\AdminBlogController;
+use App\Http\Controllers\AdminCmsPageController;
+use App\Http\Controllers\SeoController;
 
 Route::get('/', function () {
-    return view('home');
+    return view('home', [
+        'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+    ]);
 })->name('landing');
 
 Route::get('/trademark-search', function () {
-    return view('home', ['searchPage' => true]);
+    return view('home', [
+        'searchPage' => true,
+        'keyword' => request()->query('keyword', ''),
+        'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+    ]);
 })->name('trademark.search-page');
 
 Route::post('/trademark-search/ai-probability', TrademarkProbabilityController::class)
     ->middleware('throttle:20,1')
     ->name('trademark.ai-probability');
+
+Route::post('/trademark-search/probability-report', [TrademarkProbabilityController::class, 'downloadReport'])
+    ->middleware('throttle:20,1')
+    ->name('trademark.probability-report');
 
 Route::get('/scrape-trademark', [TrademarkScraperController::class, 'scrape']);
 
@@ -55,6 +76,26 @@ Route::get('/flow-guide', function () {
 Route::get('/comming-soon', function () {
     return view('comming-soon');
 })->name('comming-soon');
+
+Route::get('/about-us', [PublicPageController::class, 'about'])->name('about');
+Route::get('/terms-and-conditions', [PublicPageController::class, 'terms'])->name('terms');
+Route::get('/privacy-policy', [PublicPageController::class, 'privacy'])->name('privacy');
+Route::get('/refund-policy', [PublicPageController::class, 'refund'])->name('refund');
+Route::get('/faq', [PublicPageController::class, 'faq'])->name('faq');
+Route::get('/contact', [PublicPageController::class, 'contact'])->name('contact');
+Route::post('/contact', [PublicPageController::class, 'submitContact'])
+    ->middleware('throttle:5,1')
+    ->name('contact.submit');
+Route::get('/careers', [CareerController::class, 'index'])->name('careers.index');
+Route::get('/careers/{careerJob:slug}', [CareerController::class, 'show'])->name('careers.show');
+Route::get('/careers/{careerJob:slug}/apply', [CareerController::class, 'apply'])->name('careers.apply');
+Route::post('/careers/{careerJob:slug}/apply', [CareerController::class, 'submit'])
+    ->middleware('throttle:5,1')
+    ->name('careers.submit');
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 
 Route::get('/services/trademark/filed-and-stuck', [StuckTrademarkController::class, 'landing'])->name('stuck-trademark.landing');
 Route::get('/services/trademark/opposition-management', function () {
@@ -94,7 +135,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Trademark Application Flow (Single Pre-Payment Form)
     Route::get('/trademark/type-selection', function () {
-        return view('trademark.application-form-modern');
+        return view('trademark.application-form-modern', [
+            'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+        ]);
     })->name('trademark.type-selection');
 
     Route::get('/trademark/kyc/{type}', function () {
@@ -102,7 +145,9 @@ Route::middleware(['auth'])->group(function () {
     })->name('trademark.kyc');
 
     Route::get('/trademark/form/{type?}', function () {
-        return view('trademark.application-form-modern');
+        return view('trademark.application-form-modern', [
+            'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+        ]);
     })->name('trademark.application-form');
     Route::post('/trademark/store', [TrademarkController::class, 'storeApplication'])->name('trademark.store');
 
@@ -226,11 +271,54 @@ Route::middleware(['auth'])->group(function () {
 // ADMIN ROUTES
 Route::middleware(['admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::resource('/blogs', AdminBlogController::class)
+        ->except('show')
+        ->names([
+            'index' => 'admin.blogs.index',
+            'create' => 'admin.blogs.create',
+            'store' => 'admin.blogs.store',
+            'edit' => 'admin.blogs.edit',
+            'update' => 'admin.blogs.update',
+            'destroy' => 'admin.blogs.destroy',
+        ]);
+    Route::get('/cms-pages', [AdminCmsPageController::class, 'index'])->name('admin.cms-pages.index');
+    Route::get('/cms-pages/{key}/edit', [AdminCmsPageController::class, 'edit'])->name('admin.cms-pages.edit');
+    Route::put('/cms-pages/{key}', [AdminCmsPageController::class, 'update'])->name('admin.cms-pages.update');
+    Route::resource('/career-jobs', AdminCareerJobController::class)
+        ->except('show')
+        ->parameters(['career-jobs' => 'careerJob'])
+        ->names([
+            'index' => 'admin.career-jobs.index',
+            'create' => 'admin.career-jobs.create',
+            'store' => 'admin.career-jobs.store',
+            'edit' => 'admin.career-jobs.edit',
+            'update' => 'admin.career-jobs.update',
+            'destroy' => 'admin.career-jobs.destroy',
+        ]);
+    Route::get('/career-applications', [AdminCareerApplicationController::class, 'index'])->name('admin.career-applications.index');
+    Route::get('/career-applications/{careerApplication}', [AdminCareerApplicationController::class, 'show'])->name('admin.career-applications.show');
+    Route::patch('/career-applications/{careerApplication}', [AdminCareerApplicationController::class, 'update'])->name('admin.career-applications.update');
+    Route::get('/career-applications/{careerApplication}/resume', [AdminCareerApplicationController::class, 'downloadResume'])->name('admin.career-applications.resume');
+    Route::resource('/faqs', AdminFaqController::class)
+        ->except('show')
+        ->names([
+            'index' => 'admin.faqs.index',
+            'create' => 'admin.faqs.create',
+            'store' => 'admin.faqs.store',
+            'edit' => 'admin.faqs.edit',
+            'update' => 'admin.faqs.update',
+            'destroy' => 'admin.faqs.destroy',
+        ]);
+    Route::get('/contact-messages', [AdminContactMessageController::class, 'index'])->name('admin.contact-messages.index');
+    Route::get('/contact-messages/{contactMessage}', [AdminContactMessageController::class, 'show'])->name('admin.contact-messages.show');
+    Route::patch('/contact-messages/{contactMessage}', [AdminContactMessageController::class, 'update'])->name('admin.contact-messages.update');
     Route::get('/discount-coupons', [AdminDiscountCouponController::class, 'index'])->name('admin.discount-coupons.index');
     Route::get('/discount-coupons/create', [AdminDiscountCouponController::class, 'create'])->name('admin.discount-coupons.create');
     Route::post('/discount-coupons', [AdminDiscountCouponController::class, 'store'])->name('admin.discount-coupons.store');
     Route::get('/discount-coupons/{coupon}/edit', [AdminDiscountCouponController::class, 'edit'])->name('admin.discount-coupons.edit');
     Route::put('/discount-coupons/{coupon}', [AdminDiscountCouponController::class, 'update'])->name('admin.discount-coupons.update');
+    Route::get('/trademark-pricing', [AdminTrademarkPricingController::class, 'edit'])->name('admin.trademark-pricing.edit');
+    Route::put('/trademark-pricing', [AdminTrademarkPricingController::class, 'update'])->name('admin.trademark-pricing.update');
     Route::get('/applications', [AdminController::class, 'listPendingApplications'])->name('admin.applications');
     Route::get('/applications/all', [AdminController::class, 'listAllApplications'])->name('admin.all-applications');
     Route::get('/application/{id}', [AdminController::class, 'viewApplication'])->name('admin.view-application');

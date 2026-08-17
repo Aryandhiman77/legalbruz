@@ -15,7 +15,7 @@ class TrademarkProbabilityService
 
     private const INACTIVE_STATUSES = ['refused', 'abandoned', 'removed', 'withdrawn', 'cancelled', 'expired'];
 
-    private const DISCLAIMER = 'This automated score is based on available trademark search records, name similarity, trademark type and status. It is not legal advice and does not guarantee acceptance or refusal by the Trademark Registry.';
+    public const DISCLAIMER = 'This report is intended solely as an indicative conflict-risk assessment based on available trademark search records. It should not be treated as an accurate, exhaustive, or conclusive legal opinion, and it does not guarantee acceptance, refusal, or any specific outcome before the Trademark Registry.';
 
     /**
      * @param  array<int, array<string, mixed>>  $records

@@ -30,10 +30,17 @@
                         <input type="text" name="search" class="form-control form-control-sm"
                             placeholder="Search by coupon code or title" value="{{ request('search') }}">
                     </div>
+                    <select name="status" class="form-select form-select-sm" style="max-width:180px">
+                        <option value="">All statuses</option>
+                        @foreach (['active' => 'Active', 'scheduled' => 'Scheduled', 'expired' => 'Expired', 'inactive' => 'Inactive'] as $value => $label)
+                            <x-admin-status-option :value="$value" :label="$label"
+                                :selected="request('status') === $value" />
+                        @endforeach
+                    </select>
                     <button type="submit" class="btn btn-primary btn-sm" style="background-color: #2A9D8F; border: none;">
                         Filter
                     </button>
-                    @if (request('search'))
+                    @if (request()->hasAny(['search', 'status']))
                         <a href="{{ route('admin.discount-coupons.index') }}" class="btn btn-outline-secondary btn-sm">
                             Clear
                         </a>
@@ -46,7 +53,7 @@
             <div class="card-body">
                 @if ($coupons->count())
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table class="table table-hover align-middle admin-list-table">
                             <thead style="background-color: #f8f9fa; border-bottom: 2px solid #2A9D8F;">
                                 <tr>
                                     <th style="color: #1D3557;">Code</th>
@@ -75,7 +82,7 @@
                                             {{ $coupon->applicable_users === 'specific_users' ? count($coupon->selected_user_ids ?? []) . ' selected' : 'All Users' }}
                                         </td>
                                         <td>
-                                            <span class="badge {{ $coupon->status_badge_class }}">{{ $coupon->status_label }}</span>
+                                            <x-admin-status :status="$coupon->status_label" />
                                         </td>
                                         <td>
                                             <small>

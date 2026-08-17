@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\Document;
 use App\Models\Payment;
+use App\Models\TrademarkPricing;
 use App\Services\TrademarkWorkflowService;
 use App\Support\TrademarkWorkflow;
 use Illuminate\Http\Request;
@@ -104,14 +105,14 @@ class TrademarkController extends Controller
             'trademark_type' => 'required|in:word,device,shape_of_goods,colour,sound_mark,three_dimensional,taste_mark,smell_mark',
             'mark_brand' => 'required|string|max:255',
             'trademark_language' => 'required|string|max:255',
-            'trademark_origin_description' => 'required|string|max:1000',
+            'trademark_origin_description' => 'nullable|string|max:1000',
             'mark_conditions' => 'nullable|string|max:1000',
             'trademark_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
             'goods_services' => 'required|string|max:2000',
             'trade_description' => 'required|in:manufacturer,trader,service_provider',
             'trademark_usage_status' => 'required|in:used,proposed',
             'trademark_use_date' => 'nullable|date',
-            'proof_of_use' => 'required|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+            'proof_of_use' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
             'application_type' => 'required|in:trademark,certification,collective,series',
         ], $this->validationMessages());
 
@@ -143,7 +144,7 @@ class TrademarkController extends Controller
             'email' => $validated['applicant_email'],
             'brand_name' => $validated['mark_brand'],
             'logo_path' => $logoPath,
-            'description' => $validated['trademark_origin_description'],
+            'description' => $validated['trademark_origin_description'] ?? null,
             'industry' => $validated['trade_description'],
             'usage_type' => 'india',
             'first_use_date' => $validated['trademark_usage_status'] === 'used'
@@ -197,7 +198,7 @@ class TrademarkController extends Controller
                     'trademark_type' => $validated['trademark_type'],
                     'mark_brand_in_words' => $validated['mark_brand'],
                     'language_of_trademark' => $validated['trademark_language'],
-                    'origin_of_trademark' => $validated['trademark_origin_description'],
+                    'origin_of_trademark' => $validated['trademark_origin_description'] ?? null,
                     'conditions_or_limitations' => $validated['mark_conditions'] ?? null,
                     'image_of_trademark' => $logoPath,
                     'goods_or_services' => $validated['goods_services'],
@@ -234,8 +235,8 @@ class TrademarkController extends Controller
                 ->with('info', 'Payment already completed. Your application is with the admin team.');
         }
 
-        $amount = 2500;
-        $totalAmount = 5000;
+        $totalAmount = TrademarkPricing::amountForApplicantType($application->entity_type);
+        $amount = round($totalAmount * 0.5);
 
         return view('trademark.payment', [
             'application' => $application,
@@ -326,14 +327,14 @@ class TrademarkController extends Controller
             'trademark_type' => 'required|in:word,device,shape_of_goods,colour,sound_mark,three_dimensional,taste_mark,smell_mark',
             'mark_brand' => 'required|string|max:255',
             'trademark_language' => 'required|string|max:255',
-            'trademark_origin_description' => 'required|string|max:1000',
+            'trademark_origin_description' => 'nullable|string|max:1000',
             'mark_conditions' => 'nullable|string|max:1000',
             'trademark_image' => ($hasTrademarkImage ? 'nullable' : 'required') . '|image|mimes:jpeg,png,jpg,webp|max:4096',
             'goods_services' => 'required|string|max:2000',
             'trade_description' => 'required|in:manufacturer,trader,service_provider',
             'trademark_usage_status' => 'required|in:used,proposed',
             'trademark_use_date' => 'nullable|date',
-            'proof_of_use' => ($hasProofOfUse ? 'nullable' : 'required') . '|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+            'proof_of_use' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
             'application_type' => 'required|in:trademark,certification,collective,series',
         ], $this->validationMessages());
 
@@ -364,7 +365,7 @@ class TrademarkController extends Controller
             'email' => $validated['applicant_email'],
             'brand_name' => $validated['mark_brand'],
             'logo_path' => $logoPath,
-            'description' => $validated['trademark_origin_description'],
+            'description' => $validated['trademark_origin_description'] ?? null,
             'industry' => $validated['trade_description'],
             'usage_type' => 'india',
             'first_use_date' => $validated['trademark_usage_status'] === 'used'
@@ -418,7 +419,7 @@ class TrademarkController extends Controller
                     'trademark_type' => $validated['trademark_type'],
                     'mark_brand_in_words' => $validated['mark_brand'],
                     'language_of_trademark' => $validated['trademark_language'],
-                    'origin_of_trademark' => $validated['trademark_origin_description'],
+                    'origin_of_trademark' => $validated['trademark_origin_description'] ?? null,
                     'conditions_or_limitations' => $validated['mark_conditions'] ?? null,
                     'image_of_trademark' => $logoPath,
                     'goods_or_services' => $validated['goods_services'],

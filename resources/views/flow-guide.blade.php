@@ -683,7 +683,13 @@
                         </div>
                         <div class="info-box">
                             <h5>💰 Payment Details</h5>
-                            <p><strong>₹7,000</strong> for Individual | <strong>₹9,000</strong> for Company <b>/</b> LLP
+                            @php
+                                $flowTrademarkPrices = \App\Models\TrademarkPricing::activePlans();
+                                $flowTrademarkDefaults = \App\Models\TrademarkPricing::defaults();
+                                $flowIndividualPrice = (float) ($flowTrademarkPrices['individual']['amount'] ?? $flowTrademarkDefaults['individual']['amount']);
+                                $flowCompanyPrice = (float) ($flowTrademarkPrices['company']['amount'] ?? $flowTrademarkDefaults['company']['amount']);
+                            @endphp
+                            <p><strong>₹{{ number_format($flowIndividualPrice, 0) }}</strong> for Individual | <strong>₹{{ number_format($flowCompanyPrice, 0) }}</strong> for Company <b>/</b> LLP
                                 <b>/</b> Partnership <b>/</b> NGO. (50% advance)
                             </p>
                         </div>
@@ -898,7 +904,13 @@
                 <div class="col-md-6">
                     <div class="info-box">
                         <h5>💡 50% Advance Payment Policy</h5>
-                        <p>You pay 50% (₹7,000 for Individual / Proprietor / Trader) in advance. Remaining 50% is paid
+                        @php
+                            $flowTrademarkPrices = $flowTrademarkPrices ?? \App\Models\TrademarkPricing::activePlans();
+                            $flowTrademarkDefaults = $flowTrademarkDefaults ?? \App\Models\TrademarkPricing::defaults();
+                            $flowIndividualPrice = $flowIndividualPrice ?? (float) ($flowTrademarkPrices['individual']['amount'] ?? $flowTrademarkDefaults['individual']['amount']);
+                            $flowIndividualAdvance = round($flowIndividualPrice * 0.5);
+                        @endphp
+                        <p>You pay 50% (₹{{ number_format($flowIndividualAdvance, 0) }} for Individual / Proprietor / Trader) in advance. Remaining 50% is paid
                             after admin approval
                             and before or at IPO filing. No filing happens without payment.</p>
                     </div>

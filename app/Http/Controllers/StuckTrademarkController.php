@@ -10,6 +10,7 @@ use App\Models\StuckTrademarkDocument;
 use App\Models\StuckTrademarkStatusLog;
 use App\Support\StuckTrademarkWorkflow;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -1008,11 +1009,28 @@ class StuckTrademarkController extends Controller
         return redirect()->route('stuck-trademark.show', $case)->with('success', 'Execution package skipped. Your recovery case has moved to the next step.');
     }
 
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        $cases = StuckTrademarkCase::with('user')->latest()->paginate(20);
+        $cases = StuckTrademarkCase::with('user')
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = '%'.trim((string) $request->string('search')).'%';
+                $query->where(function ($query) use ($search) {
+                    $query->where('case_number', 'like', $search)
+                        ->orWhere('application_number', 'like', $search)
+                        ->orWhere('applicant_name', 'like', $search)
+                        ->orWhere('email', 'like', $search)
+                        ->orWhere('trademark_name', 'like', $search);
+                });
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('admin.stuck-trademark.index', ['cases' => $cases]);
+        return view('admin.stuck-trademark.index', [
+            'cases' => $cases,
+            'statuses' => StuckTrademarkWorkflow::labels(),
+        ]);
     }
 
     public function adminShow(StuckTrademarkCase $case)
@@ -1040,6 +1058,10 @@ class StuckTrademarkController extends Controller
         $from = $case->status;
         $updates = $validated;
         unset($updates['note']);
+
+        if (filled($validated['next_follow_up_at'] ?? null)) {
+            $updates['next_follow_up_at'] = Carbon::parse($validated['next_follow_up_at'], 'Asia/Kolkata')->utc();
+        }
 
         if ($validated['status'] === StuckTrademarkWorkflow::RESOLVED && !$case->resolved_at) {
             $updates['resolved_at'] = now();

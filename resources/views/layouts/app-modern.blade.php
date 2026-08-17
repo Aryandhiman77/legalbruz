@@ -5,7 +5,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Legal Bruz (LLP)') }} - IPR Registration</title>
+    <title>@yield('title', config('app.name', 'Legal Bruz (LLP)') . ' - IPR Registration')</title>
+    <meta name="description" content="@yield('meta_description', 'Legal Bruz simplifies trademark registration, intellectual property protection, and legal support for businesses across India.')">
+    <meta name="robots" content="@yield('meta_robots', request()->is('admin*', 'login', 'register', 'dashboard*', 'home') ? 'noindex, nofollow' : 'index, follow, max-image-preview:large')">
+    <link rel="canonical" href="@yield('canonical_url', url()->current())">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:site_name" content="Legal Bruz">
+    <meta property="og:title" content="@yield('og_title', 'Legal Bruz - Intellectual Property Services')">
+    <meta property="og:description" content="@yield('og_description', 'Trademark and intellectual property services made clear and accessible.')">
+    <meta property="og:url" content="@yield('canonical_url', url()->current())">
+    <meta property="og:image" content="@yield('og_image', asset('logo.png'))">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('og_title', 'Legal Bruz - Intellectual Property Services')">
+    <meta name="twitter:description" content="@yield('og_description', 'Trademark and intellectual property services made clear and accessible.')">
+    <meta name="twitter:image" content="@yield('og_image', asset('logo.png'))">
+    @yield('head')
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -600,9 +614,21 @@
         <!-- ============ FOOTER ============ -->
         <footer>
             <div class="container">
-                <p>&copy; 2026 Legal Bruz (LLP). All rights reserved. | <a href="#"
-                        style="color: var(--emerald); text-decoration: none;">Privacy Policy</a> | <a href="#"
-                        style="color: var(--emerald); text-decoration: none;">Terms</a></p>
+                <p>&copy; {{ now()->year }} Legal Bruz (LLP). All rights reserved. |
+                    <a href="{{ route('blog.index') }}" style="color: var(--emerald); text-decoration: none;">Blog</a> |
+                    <a href="{{ route('careers.index') }}" style="color: var(--emerald); text-decoration: none;">Careers</a> |
+                    <a href="{{ route('faq') }}" style="color: var(--emerald); text-decoration: none;">FAQ</a> |
+                    <a href="{{ route('contact') }}" style="color: var(--emerald); text-decoration: none;">Contact</a> |
+                    <a href="{{ route('privacy') }}" style="color: var(--emerald); text-decoration: none;">Privacy Policy</a> |
+                    <a href="{{ route('refund') }}" style="color: var(--emerald); text-decoration: none;">Refund Policy</a> |
+                    <a href="{{ route('terms') }}" style="color: var(--emerald); text-decoration: none;">Terms</a>
+                    @foreach (config('social_links') as $social)
+                        | <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer"
+                            aria-label="Legal Bruz on {{ $social['label'] }}" style="color: var(--emerald); text-decoration: none;">
+                            <i class="bi {{ $social['icon'] }}" aria-hidden="true"></i> {{ $social['label'] }}
+                        </a>
+                    @endforeach
+                </p>
             </div>
         </footer>
     </div>
@@ -642,6 +668,7 @@
             }
         }
     </style>
+    @include('partials.disclaimer-consent')
     @include('partials.button-loading')
     @include('partials.sweet-alert-confirmations')
 </body>

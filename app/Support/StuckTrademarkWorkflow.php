@@ -58,6 +58,27 @@ class StuckTrademarkWorkflow
         return static::labels()[$status] ?? str_replace('_', ' ', (string) $status);
     }
 
+    public static function effectiveStatus(
+        ?string $status,
+        mixed $executionCompletedAt = null,
+        mixed $resolvedAt = null,
+        mixed $closedAt = null,
+    ): ?string {
+        if ($closedAt) {
+            return self::CLOSED;
+        }
+
+        if ($resolvedAt) {
+            return self::RESOLVED;
+        }
+
+        if ($executionCompletedAt && !in_array($status, [self::MONITORING, self::RESOLVED, self::CLOSED], true)) {
+            return self::MONITORING;
+        }
+
+        return $status;
+    }
+
     public static function timeline(): array
     {
         return [

@@ -10,6 +10,8 @@ use App\Models\TrademarkOppositionCase;
 use App\Models\ApplicationStatusLog;
 use App\Models\User;
 use App\Models\StuckTrademarkCase;
+use App\Models\WebsiteVisitor;
+use App\Models\WebsiteServiceVisit;
 use App\Services\DocumentGenerator;
 use App\Services\NotificationService;
 use App\Services\TrademarkWorkflowService;
@@ -48,6 +50,20 @@ class AdminController extends Controller
         })->count();
         $leads = User::count();
         $recoveryCases = StuckTrademarkCase::count();
+        $websiteVisitors = Schema::hasTable('website_visitors') ? WebsiteVisitor::count() : 0;
+        $serviceLeads = Schema::hasTable('website_visitors')
+            ? WebsiteVisitor::whereNotNull('service_first_visited_at')->count()
+            : 0;
+        $serviceVisitorCounts = collect(config('visitor_services', []))
+            ->map(function (array $service, string $key) {
+                return array_merge($service, [
+                    'key' => $key,
+                    'visitors' => Schema::hasTable('website_service_visits')
+                        ? WebsiteServiceVisit::where('service_key', $key)->count()
+                        : 0,
+                ]);
+            })
+            ->values();
 
         return view('admin.dashboard', [
             'pendingCount' => $pendingApplications,
@@ -56,24 +72,45 @@ class AdminController extends Controller
             'registeredCount' => $registeredApplications,
             'leadsCount' => $leads,
             'recoveryCases' => $recoveryCases,
+            'websiteVisitors' => $websiteVisitors,
+            'serviceLeads' => $serviceLeads,
+            'serviceVisitorCounts' => $serviceVisitorCounts,
         ]);
     }
 
     /**
      * List pending applications for review
      */
-    public function listPendingApplications()
+    public function listPendingApplications(Request $request)
     {
-        $applications = Application::whereIn($this->statusColumn(), $this->pendingQueueStatuses())
+        $statusColumn = $this->statusColumn();
+        $pendingStatuses = $this->pendingQueueStatuses();
+        $applications = Application::whereIn($statusColumn, $pendingStatuses)
+            ->when($request->filled('status'), fn ($query) => $query->where($statusColumn, $request->string('status')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = '%'.trim((string) $request->string('search')).'%';
+                $query->where(function ($query) use ($search) {
+                    $query->where('applicant_name', 'like', $search)
+                        ->orWhere('brand_name', 'like', $search)
+                        ->orWhere('email', 'like', $search)
+                        ->orWhere('application_number', 'like', $search);
+                });
+            })
             ->with($this->applicationRelations())
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $applications->getCollection()->transform(function (Application $application) {
             return $this->normalizeApplicationRelations($application);
         });
 
-        return view('admin.pending-applications', ['applications' => $applications]);
+        return view('admin.pending-applications', [
+            'applications' => $applications,
+            'pendingStatuses' => collect($pendingStatuses)
+                ->mapWithKeys(fn ($status) => [$status => TrademarkWorkflow::label($status)])
+                ->all(),
+        ]);
     }
 
     /**
@@ -1097,6 +1134,15 @@ class AdminController extends Controller
     public function listAllApplications(Request $request)
     {
         $statusColumn = $this->statusColumn();
+        $applicationStats = [
+            'pending' => Application::where($statusColumn, $this->pendingReviewStatus())->count(),
+            'approved' => Application::where($statusColumn, $this->approvedStatus())->count(),
+            'filed' => Application::where($statusColumn, $this->filedStatus())->count(),
+            'registered' => Application::where(function ($query) {
+                $query->where('registry_status', TrademarkWorkflow::REGISTRY_REGISTERED)
+                    ->orWhereNotNull('registered_at');
+            })->count(),
+        ];
 
         $applications = Application::with('user')
             ->when($request->filled('status'), function ($query) use ($request, $statusColumn) {
@@ -1123,7 +1169,14 @@ class AdminController extends Controller
             ->paginate(50)
             ->withQueryString();
 
-        return view('admin.all-applications', ['applications' => $applications]);
+        return view('admin.all-applications', [
+            'applications' => $applications,
+            'applicationStats' => $applicationStats,
+            'applicationStatuses' => [
+                ...TrademarkWorkflow::labels(),
+                TrademarkWorkflow::REGISTRY_REGISTERED => 'Registered',
+            ],
+        ]);
     }
 
     /**

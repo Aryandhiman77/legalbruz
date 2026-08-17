@@ -5,8 +5,10 @@
         $trademarkFormCoupon = auth()->check()
             ? \App\Models\DiscountCoupon::autoApplyForPayment('trademark_filing', auth()->id())
             : \App\Models\DiscountCoupon::autoApplyForPublicService('trademark_filing');
-        $individualPlanAmount = 7000;
-        $otherApplicantPlanAmount = 9000;
+        $trademarkPricingPlans = $trademarkPricingPlans ?? \App\Models\TrademarkPricing::activePlans();
+        $trademarkPricingDefaults = \App\Models\TrademarkPricing::defaults();
+        $individualPlanAmount = (float) ($trademarkPricingPlans['individual']['amount'] ?? $trademarkPricingDefaults['individual']['amount']);
+        $otherApplicantPlanAmount = (float) ($trademarkPricingPlans['company']['amount'] ?? $trademarkPricingDefaults['company']['amount']);
         $individualOfferAmount = $trademarkFormCoupon
             ? $trademarkFormCoupon->discountedAmountFor($individualPlanAmount)
             : $individualPlanAmount;
@@ -529,9 +531,9 @@
                                         @enderror
                                     </div>
                                     <div class="col-12">
-                                        <label for="trademark_origin_description" class="form-label required">A Brief Description of the Origin of the Trademark</label>
+                                        <label for="trademark_origin_description" class="form-label">A Brief Description of the Origin of the Trademark</label>
                                         <textarea id="trademark_origin_description" name="trademark_origin_description" rows="3"
-                                            class="form-control @error('trademark_origin_description') is-invalid @enderror" required>{{ old('trademark_origin_description') }}</textarea>
+                                            class="form-control @error('trademark_origin_description') is-invalid @enderror">{{ old('trademark_origin_description') }}</textarea>
                                         @error('trademark_origin_description')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -597,10 +599,10 @@
                                         @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="proof_of_use" class="form-label required">Proof of Use of Trademark</label>
+                                        <label for="proof_of_use" class="form-label">Proof of Use of Trademark</label>
                                         <input type="file" id="proof_of_use" name="proof_of_use"
                                             class="form-control @error('proof_of_use') is-invalid @enderror"
-                                            accept=".pdf,image/png,image/jpeg,image/jpg,image/webp" required>
+                                            accept=".pdf,image/png,image/jpeg,image/jpg,image/webp">
                                         <small class="text-muted d-block mt-2">Allowed formats: PDF, JPG, PNG, WEBP. Max size: 5 MB.</small>
                                         @error('proof_of_use')
                                             <div class="invalid-feedback">{{ $message }}</div>

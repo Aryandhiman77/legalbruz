@@ -17,16 +17,22 @@
         <section class="admin-card">
             <div class="admin-card-body">
                 <form class="admin-filter" method="GET">
+                    <input class="admin-input" name="search" value="{{ request('search') }}"
+                        placeholder="Search case, application, trademark, or client">
                     <select class="admin-input" name="status">
                         <option value="">All statuses</option>
                         @foreach ($statuses as $status)
-                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                            <x-admin-status-option :value="$status" :selected="request('status') === $status" />
                         @endforeach
                     </select>
                     <button class="admin-btn" type="submit">Filter</button>
+                    @if (request()->hasAny(['search', 'status']))
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ route('admin.examination-reply.index') }}">Clear</a>
+                    @endif
                 </form>
-                <table class="admin-table">
-                    <thead><tr><th>Case</th><th>Trademark</th><th>Client</th><th>Deadline</th><th>Status</th><th>Payment</th><th>Action</th></tr></thead>
+                <div class="admin-table-scroll">
+                <table class="admin-table admin-list-table">
+                    <thead><tr><th>Case</th><th>Trademark</th><th>Client</th><th>Deadline</th><th>Status</th><th>Payment</th><th>Updated</th><th>Action</th></tr></thead>
                     <tbody>
                     @forelse ($cases as $case)
                         @php
@@ -42,16 +48,18 @@
                             <td><strong>{{ $case->case_number }}</strong><br><small>{{ $case->application_number }}</small></td>
                             <td>{{ $case->trademark_name }}<br><small>Class {{ $case->trademark_class }}</small></td>
                             <td>{{ $case->applicant_name }}</td>
-                            <td><span class="badge {{ $case->deadline_status }}">{{ $case->reply_deadline->format('d M Y') }}</span></td>
-                            <td><span class="badge blue">{{ $displayStatus }}</span></td>
-                            <td>{{ ucfirst($case->payment_status) }}</td>
+                            <td><x-admin-status :status="$case->deadline_status" :label="$case->reply_deadline->format('d M Y')" /></td>
+                            <td><x-admin-status :status="$displayStatus" /></td>
+                            <td><x-admin-status :status="$case->payment_status" /></td>
+                            <td><x-admin-date-time :value="$case->updated_at" /></td>
                             <td><a class="admin-btn" href="{{ route('admin.examination-reply.show', $case) }}">Open</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7">No Examination Report Reply cases yet.</td></tr>
+                        <tr><td colspan="8">No Examination Report Reply cases yet.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
+                </div>
                 <div class="mt-3">{{ $cases->links() }}</div>
             </div>
         </section>

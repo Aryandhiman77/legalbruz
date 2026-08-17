@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\DiscountCoupon;
 use App\Models\Payment;
+use App\Models\TrademarkPricing;
 use App\Services\TrademarkWorkflowService;
 use App\Support\TrademarkWorkflow;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class PaymentController extends Controller
             abort(403);
         }
 
-        $originalTotalAmount = $application->entity_type === 'individual' ? 7000 : 9000;
+        $originalTotalAmount = TrademarkPricing::amountForApplicantType($application->entity_type);
         $autoApplyCoupon = DiscountCoupon::autoApplyForPayment('trademark_filing', Auth::id());
         $totalAmount = $autoApplyCoupon
             ? $autoApplyCoupon->discountedAmountFor($originalTotalAmount)
@@ -114,11 +115,12 @@ class PaymentController extends Controller
                 'full' => 'full',
                 default => 'advance',
             };
+            $serviceTotalAmount = TrademarkPricing::amountForApplicantType($application->entity_type);
             $paymentData = [
                 'application_id' => $applicationId,
                 'user_id' => Auth::id(),
                 'amount' => $validated['amount'],
-                'total_amount' => $application->entity_type === 'individual' ? 7000 : 9000,
+                'total_amount' => $serviceTotalAmount,
                 'percentage' => $normalizedPaymentType === 'advance' ? '50%' : '100%',
                 'payment_method' => 'razorpay',
                 'status' => 'pending',

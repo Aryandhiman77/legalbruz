@@ -2,6 +2,7 @@
 
 @section('content')
     @php
+        $displayTimezone = 'Asia/Kolkata';
         $visibleFinalReports = $case->executionDocuments
             ->where('document_type', 'Final report')
             ->values();
@@ -85,7 +86,7 @@
                 @forelse ($case->executionUpdates as $update)
                     <div class="client-execution-row">
                         <strong>{{ $update->title }}</strong>
-                        <div class="text-muted small">{{ $update->stage }} | {{ $update->created_at->format('d M Y, h:i A') }}</div>
+                        <div class="text-muted small">{{ $update->stage }} | {{ $update->created_at->timezone($displayTimezone)->format('d M Y, h:i A') }}</div>
                         @if ($update->note)
                             <p class="mb-1 mt-2">{{ $update->note }}</p>
                         @endif

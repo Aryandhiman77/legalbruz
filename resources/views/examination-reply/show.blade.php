@@ -3,11 +3,16 @@
 @section('content')
     @php
         $workflow = \App\Support\ExaminationReportReplyWorkflow::class;
+        $displayTimezone = 'Asia/Kolkata';
+        $formatDateTime = fn ($timestamp, string $format = 'd M Y, h:i A') => $timestamp
+            ? \Illuminate\Support\Carbon::parse($timestamp)->timezone($displayTimezone)->format($format)
+            : null;
         $objectionReplyOriginalAmount = (float) ($case->original_package_price ?: $case->package_price ?: 0);
         $objectionReplyAutoCoupon = $autoApplyCoupon ?? null;
         $objectionReplyPayableAmount = $case->payment_status === 'paid'
             ? (float) ($case->paid_amount ?: max($objectionReplyOriginalAmount - (float) $case->discount_amount, 0))
             : ($objectionReplyAutoCoupon ? $objectionReplyAutoCoupon->discountedAmountFor($objectionReplyOriginalAmount) : $objectionReplyOriginalAmount);
+        $objectionReplyPayableAmountForJs = number_format($objectionReplyPayableAmount, 2, '.', '');
         $objectionReplyDiscountAmount = $case->payment_status === 'paid'
             ? (float) ($case->discount_amount ?: 0)
             : max($objectionReplyOriginalAmount - $objectionReplyPayableAmount, 0);
@@ -320,7 +325,7 @@
                                         <span class="flowb-badge">{{ $step['status_label'] ?? ($step['status'] === 'completed' ? 'Completed' : ($step['status'] === 'active' ? 'Active' : 'Pending')) }}</span>
                                     </div>
                                     @if ($step['completed_at'])
-                                        <small class="flowb-step-date"><i class="bi bi-clock"></i>{{ $step['completed_at']->format('d M Y, h:i A') }}</small>
+                                        <small class="flowb-step-date"><i class="bi bi-clock"></i>{{ $formatDateTime($step['completed_at']) }}</small>
                                     @elseif (($step['is_optional'] ?? false) && $step['status'] === 'pending')
                                         <small class="flowb-step-date">Only if issued</small>
                                     @endif
@@ -373,7 +378,7 @@
                                                     <span class="flowb-stage-doc-icon"><i class="bi bi-file-earmark-check"></i></span>
                                                     <div class="flowb-stage-doc-copy">
                                                         <strong>{{ $documentDisplayName($document) }}</strong>
-                                                        <span>{{ strtoupper($document->file_type ?: 'FILE') }} · {{ $formatDocumentSize($document->file_size) }} · Uploaded {{ $document->created_at->format('d M Y, h:i A') }}</span>
+                                                        <span>{{ strtoupper($document->file_type ?: 'FILE') }} · {{ $formatDocumentSize($document->file_size) }} · Uploaded {{ $formatDateTime($document->created_at) }}</span>
                                                     </div>
                                                     <div class="flowb-stage-doc-actions">
                                                         <a href="{{ route('examination-reply.document.view', $document) }}" target="_blank" rel="noopener"><i class="bi bi-eye"></i> View</a>
@@ -393,7 +398,7 @@
                                                     <span class="flowb-stage-doc-icon"><i class="bi bi-file-earmark-check"></i></span>
                                                     <div class="flowb-stage-doc-copy">
                                                         <strong>{{ $documentDisplayName($document) }}</strong>
-                                                        <span>{{ strtoupper($document->file_type ?: 'FILE') }} · {{ $formatDocumentSize($document->file_size) }} · Uploaded {{ $document->created_at->format('d M Y, h:i A') }}</span>
+                                                        <span>{{ strtoupper($document->file_type ?: 'FILE') }} · {{ $formatDocumentSize($document->file_size) }} · Uploaded {{ $formatDateTime($document->created_at) }}</span>
                                                     </div>
                                                     <div class="flowb-stage-doc-actions">
                                                         <a href="{{ route('examination-reply.document.view', $document) }}" target="_blank" rel="noopener"><i class="bi bi-eye"></i> View</a>
@@ -424,7 +429,7 @@
                                         <div class="flowb-conversation-meta">
                                             <strong>{{ $message['sender_label'] }}</strong>
                                             @if ($message['created_at'])
-                                                <time datetime="{{ $message['created_at']->toIso8601String() }}">{{ $message['created_at']->format('d M Y, h:i A') }}</time>
+                                                <time datetime="{{ $message['created_at']->toIso8601String() }}">{{ $formatDateTime($message['created_at']) }}</time>
                                             @endif
                                         </div>
                                         <p>{{ $message['message'] }}</p>
@@ -461,7 +466,7 @@
                                         <span class="flowb-sent-document-icon"><i class="bi bi-file-earmark-check"></i></span>
                                         <div class="flowb-sent-document-copy">
                                             <strong>{{ $documentDisplayName($registryDocument) }}</strong>
-                                            <span>{{ strtoupper($registryDocument->file_type ?: 'FILE') }} · {{ $formatDocumentSize($registryDocument->file_size) }} · Uploaded {{ $registryDocument->created_at->format('d M Y, h:i A') }}</span>
+                                            <span>{{ strtoupper($registryDocument->file_type ?: 'FILE') }} · {{ $formatDocumentSize($registryDocument->file_size) }} · Uploaded {{ $formatDateTime($registryDocument->created_at) }}</span>
                                         </div>
                                         <div class="flowb-sent-document-actions">
                                             <a class="flowb-doc-action" href="{{ route('examination-reply.document.view', $registryDocument) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -480,7 +485,7 @@
                                 <div class="flowb-field"><span>Registry Update Date</span><strong>{{ $case->registry_update_date->format('d M Y') }}</strong></div>
                             @endif
                             @if ($case->closed_at)
-                                <div class="flowb-field"><span>Matter Closed On</span><strong>{{ $case->closed_at->format('d M Y, h:i A') }}</strong></div>
+                                <div class="flowb-field"><span>Matter Closed On</span><strong>{{ $formatDateTime($case->closed_at) }}</strong></div>
                             @endif
                         </div>
                         <div class="flowb-empty"><i class="bi bi-check-circle"></i><div><strong>No action is required right now.</strong></div></div>
@@ -494,7 +499,7 @@
                                 <div class="flowb-field"><span>Registry Update Date</span><strong>{{ $case->registry_update_date->format('d M Y') }}</strong></div>
                             @endif
                             @if ($case->closed_at)
-                                <div class="flowb-field"><span>Matter Closed On</span><strong>{{ $case->closed_at->format('d M Y, h:i A') }}</strong></div>
+                                <div class="flowb-field"><span>Matter Closed On</span><strong>{{ $formatDateTime($case->closed_at) }}</strong></div>
                             @endif
                         </div>
                         <div class="flowb-empty"><i class="bi bi-info-circle"></i><div><strong>No action is required right now.</strong><br>Please review the final update shared by our team.</div></div>
@@ -570,7 +575,7 @@
                                 <div class="flowb-field"><span>Registry Update Date</span><strong>{{ $case->registry_update_date->format('d M Y') }}</strong></div>
                             @endif
                             @if ($case->closed_at)
-                                <div class="flowb-field"><span>Matter Closed On</span><strong>{{ $case->closed_at->format('d M Y, h:i A') }}</strong></div>
+                                <div class="flowb-field"><span>Matter Closed On</span><strong>{{ $formatDateTime($case->closed_at) }}</strong></div>
                             @endif
                         </div>
                         <div class="flowb-empty"><i class="bi bi-check-circle"></i><div><strong>No action is required right now.</strong><br>Please review the final update shared by our team.</div></div>
@@ -740,7 +745,7 @@
                                         <span class="flowb-sent-document-icon"><i class="bi bi-file-earmark-text"></i></span>
                                         <div class="flowb-sent-document-copy">
                                             <strong>{{ $latestDraftDocument->document_title ?: 'Objection Reply Draft' }}</strong>
-                                            <span>{{ strtoupper($latestDraftDocument->file_type ?: 'FILE') }} · {{ $formatDocumentSize($latestDraftDocument->file_size) }} · Uploaded {{ $latestDraftDocument->created_at->format('d M Y, h:i A') }}</span>
+                                            <span>{{ strtoupper($latestDraftDocument->file_type ?: 'FILE') }} · {{ $formatDocumentSize($latestDraftDocument->file_size) }} · Uploaded {{ $formatDateTime($latestDraftDocument->created_at) }}</span>
                                         </div>
                                         <div class="flowb-sent-document-actions">
                                             <a class="flowb-doc-action" href="{{ route('examination-reply.document.view', $latestDraftDocument) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -760,7 +765,7 @@
                                             <span class="flowb-sent-document-icon"><i class="bi bi-file-earmark-check"></i></span>
                                             <div class="flowb-sent-document-copy">
                                                 <strong>{{ $documentDisplayName($supportingDocument) }}</strong>
-                                                <span>{{ strtoupper($supportingDocument->file_type ?: 'FILE') }} · {{ $formatDocumentSize($supportingDocument->file_size) }} · Uploaded {{ $supportingDocument->created_at->format('d M Y, h:i A') }}</span>
+                                                <span>{{ strtoupper($supportingDocument->file_type ?: 'FILE') }} · {{ $formatDocumentSize($supportingDocument->file_size) }} · Uploaded {{ $formatDateTime($supportingDocument->created_at) }}</span>
                                             </div>
                                             <div class="flowb-sent-document-actions">
                                                 <a class="flowb-doc-action" href="{{ route('examination-reply.document.view', $supportingDocument) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -1061,7 +1066,7 @@
             const objectionPayAmount = document.querySelector('[data-objection-pay-amount]');
             const updateObjectionPayAmount = () => {
                 const selected = objectionCouponInputs.find((input) => input.checked);
-                const amount = selected?.dataset.payableAmount || @json(number_format($objectionReplyPayableAmount, 2, '.', ''));
+                const amount = selected?.dataset.payableAmount || @json($objectionReplyPayableAmountForJs);
                 if (objectionPayAmount) {
                     objectionPayAmount.textContent = Number(amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                 }

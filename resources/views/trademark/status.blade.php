@@ -211,7 +211,7 @@
 
             return $paymentType === 'final' || ($paymentType !== 'advance' && $percentage === '100%');
         });
-        $serviceTotalAmount = $application->entity_type === 'individual' ? 7000 : 9000;
+        $serviceTotalAmount = \App\Models\TrademarkPricing::amountForApplicantType($application->entity_type);
         $halfPaymentAmount = $serviceTotalAmount / 2;
         $hasFullPayment = (bool) $fullPayment;
         $advanceDisplayAmount = $hasFullPayment ? $serviceTotalAmount : $halfPaymentAmount;

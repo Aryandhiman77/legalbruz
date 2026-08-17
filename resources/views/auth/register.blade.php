@@ -40,6 +40,27 @@
                         </div>
 
                         <div class="row mb-3">
+                            <label for="mobile" class="col-md-4 col-form-label text-md-end">{{ __('Indian Mobile Number') }}</label>
+
+                            <div class="col-md-6">
+                                <input id="mobile" type="tel"
+                                    class="form-control @error('mobile') is-invalid @enderror"
+                                    name="mobile" value="{{ old('mobile') }}" required inputmode="numeric"
+                                    autocomplete="tel-national" maxlength="13"
+                                    pattern="(?:(?:\+?91)|0)?[6-9][0-9]{9}"
+                                    placeholder="9876543210"
+                                    title="Enter a valid 10-digit Indian mobile number">
+                                <small class="form-text text-muted">Use a 10-digit Indian number beginning with 6, 7, 8, or 9.</small>
+
+                                @error('mobile')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
                             <label for="password" class="col-md-4 col-form-label text-md-end">{{ __('Password') }}</label>
 
                             <div class="col-md-6">

@@ -495,8 +495,18 @@ class ExaminationReportReplyController extends Controller
         $cases = ExaminationReportReplyCase::query()
             ->with('documents')
             ->when($request->filled('status'), fn ($query) => $query->where('current_admin_status', $request->string('status')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = '%'.trim((string) $request->string('search')).'%';
+                $query->where(function ($query) use ($search) {
+                    $query->where('case_number', 'like', $search)
+                        ->orWhere('application_number', 'like', $search)
+                        ->orWhere('trademark_name', 'like', $search)
+                        ->orWhere('applicant_name', 'like', $search);
+                });
+            })
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.examination-reply.index', [
             'cases' => $cases,

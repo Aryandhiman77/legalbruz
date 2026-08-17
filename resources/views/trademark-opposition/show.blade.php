@@ -3,6 +3,10 @@
 @section('content')
     @php
         $workflow = \App\Support\TrademarkOppositionWorkflow::class;
+        $displayTimezone = 'Asia/Kolkata';
+        $formatDateTime = fn ($timestamp, string $format = 'd M Y, h:i A') => $timestamp
+            ? \Illuminate\Support\Carbon::parse($timestamp)->timezone($displayTimezone)->format($format)
+            : null;
         $allDocumentTypes = $requiredDocuments + $optionalDocuments;
         $latestDocuments = $case->documents->sortByDesc('id')->unique('document_type')->keyBy('document_type');
         $rejectedDocuments = $latestDocuments->filter(fn ($document) => $document->review_status === 'rejected');
@@ -2286,7 +2290,7 @@
                                 </div>
                                 <div class="opp-step-state">
                                     <span class="opp-status-badge {{ $badgeClass }}">{{ ucfirst($state === 'complete' ? 'Completed' : $state) }}</span>
-                                    @if ($latestForStatus)<span class="opp-step-date">{{ $latestForStatus->created_at->format('d M Y, h:i A') }}</span>@endif
+                                    @if ($latestForStatus)<span class="opp-step-date">{{ $formatDateTime($latestForStatus->created_at) }}</span>@endif
                                 </div>
                             </li>
                         @endforeach
@@ -2333,7 +2337,7 @@
                                             <span class="opp-stage-doc-icon"><i class="bi bi-file-earmark-arrow-down"></i></span>
                                             <div class="opp-stage-doc-copy">
                                                 <strong>{{ $document['label'] }}</strong>
-                                                <span>{{ $document['file_type'] }} · {{ $formatStageFileSize($document['file_size']) }} · Sent {{ optional($document['created_at'])->format('d M Y, h:i A') }}</span>
+                                                <span>{{ $document['file_type'] }} · {{ $formatStageFileSize($document['file_size']) }} · Sent {{ $formatDateTime($document['created_at']) }}</span>
                                             </div>
                                             <div class="opp-stage-doc-actions">
                                                 <a href="{{ $viewUrl }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -2799,7 +2803,7 @@
                                         <span class="opp-sent-document-icon"><i class="bi bi-file-earmark-text"></i></span>
                                         <div class="opp-sent-document-copy">
                                             <strong>{{ $case->draft_display_name }}</strong>
-                                            <span>{{ $draftExtension }} · {{ $formatSentFileSize($draftBytes) }} · Uploaded {{ $case->updated_at->format('d M Y, h:i A') }}</span>
+                                            <span>{{ $draftExtension }} · {{ $formatSentFileSize($draftBytes) }} · Uploaded {{ $formatDateTime($case->updated_at) }}</span>
                                         </div>
                                         <div class="opp-sent-document-actions">
                                             <a class="opp-doc-action" href="{{ route('trademark-opposition.file.view', [$case, 'draft']) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -2818,7 +2822,7 @@
                                                 <span class="opp-sent-document-icon"><i class="bi bi-file-earmark-check"></i></span>
                                                 <div class="opp-sent-document-copy">
                                                     <strong>{{ $evidenceDocumentName($additionalDocument) }}</strong>
-                                                    <span>{{ strtoupper($additionalDocument->file_type ?: 'FILE') }} · {{ $formatSentFileSize($additionalDocument->file_size) }} · Uploaded {{ $additionalDocument->created_at->format('d M Y, h:i A') }}</span>
+                                                    <span>{{ strtoupper($additionalDocument->file_type ?: 'FILE') }} · {{ $formatSentFileSize($additionalDocument->file_size) }} · Uploaded {{ $formatDateTime($additionalDocument->created_at) }}</span>
                                                 </div>
                                                 <div class="opp-sent-document-actions">
                                                     <a class="opp-doc-action" href="{{ route('trademark-opposition.document.view', [$case, 'evidence', $additionalDocument->id]) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -2940,7 +2944,7 @@
                                             <span class="opp-stage-doc-icon"><i class="bi bi-file-earmark-check"></i></span>
                                             <div class="opp-stage-doc-copy">
                                                 <strong>{{ $document['label'] }}</strong>
-                                                <span>{{ $document['file_type'] }} · {{ $formatStageFileSize($document['file_size']) }} · Sent {{ optional($document['created_at'])->format('d M Y, h:i A') }}</span>
+                                                <span>{{ $document['file_type'] }} · {{ $formatStageFileSize($document['file_size']) }} · Sent {{ $formatDateTime($document['created_at']) }}</span>
                                             </div>
                                             <div class="opp-stage-doc-actions">
                                                 <a href="{{ $viewUrl }}" target="_blank"><i class="bi bi-eye"></i> View</a>
@@ -2968,7 +2972,7 @@
                                             <span class="opp-stage-doc-icon"><i class="bi bi-file-earmark-arrow-down"></i></span>
                                             <div class="opp-stage-doc-copy">
                                                 <strong>{{ $document['label'] }}</strong>
-                                                <span>{{ $document['file_type'] }} · {{ $formatStageFileSize($document['file_size']) }} · Sent {{ optional($document['created_at'])->format('d M Y, h:i A') }}</span>
+                                                <span>{{ $document['file_type'] }} · {{ $formatStageFileSize($document['file_size']) }} · Sent {{ $formatDateTime($document['created_at']) }}</span>
                                             </div>
                                             <div class="opp-stage-doc-actions">
                                                 <a href="{{ $viewUrl }}" target="_blank"><i class="bi bi-eye"></i> View</a>

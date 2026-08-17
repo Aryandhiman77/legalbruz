@@ -3,6 +3,10 @@
 @section('content')
     @php
         $workflow = \App\Support\TrademarkOppositionWorkflow::class;
+        $displayTimezone = 'Asia/Kolkata';
+        $formatDateTime = fn ($timestamp, string $format = 'd M Y, h:i A') => $timestamp
+            ? \Illuminate\Support\Carbon::parse($timestamp)->timezone($displayTimezone)->format($format)
+            : null;
         $uploadedEvidence = $case->evidence->where('file_path', '!=', 'metadata')->where('uploaded_by', 'client')->sortByDesc('id')->unique('evidence_type')->reject(fn ($evidence) => $evidence->review_status === 'rejected')->pluck('evidence_type')->all();
         $requiredEvidenceComplete = collect($requiredEvidenceGroups)->every(fn ($types) => count(array_intersect($types, $uploadedEvidence)) > 0);
         $requiredEvidenceTypes = collect($requiredEvidenceGroups)->flatten()->unique()->all();
@@ -1019,7 +1023,7 @@
                                         @if($changedAt)
                                             <small class="flowb-step-date">
                                                 <i class="bi bi-clock"></i>
-                                                {{ $changedAt->format('d M Y, h:i A') }}
+                                                {{ $formatDateTime($changedAt) }}
                                             </small>
                                         @endif
                                         @if($index === 7 && $case->counter_statement_deadline)
@@ -1346,7 +1350,7 @@
                                             $documentLabel = $documentDisplayName($document);
                                             $documentType = strtoupper(data_get($document, 'file_type') ?: 'FILE');
                                             $documentSize = $formatBytes(data_get($document, 'file_size'));
-                                            $documentDate = optional(data_get($document, 'created_at'))->format('d M Y, h:i A');
+                                            $documentDate = $formatDateTime(data_get($document, 'created_at'));
                                         @endphp
                                         <div class="flowb-doc">
                                             <i class="bi bi-file-earmark-arrow-down"></i>
@@ -1401,7 +1405,7 @@
                                         $documentLabel = $documentDisplayName($document);
                                         $documentType = strtoupper(data_get($document, 'file_type') ?: 'FILE');
                                         $documentSize = $formatBytes(data_get($document, 'file_size'));
-                                        $documentDate = optional(data_get($document, 'created_at'))->format('d M Y, h:i A');
+                                        $documentDate = $formatDateTime(data_get($document, 'created_at'));
                                     @endphp
                                     <div class="flowb-stage-doc-row">
                                         <span class="flowb-stage-doc-icon"><i class="bi bi-file-earmark-check"></i></span>
@@ -1431,7 +1435,7 @@
                                         $documentLabel = $documentDisplayName($document);
                                         $documentType = strtoupper(data_get($document, 'file_type') ?: 'FILE');
                                         $documentSize = $formatBytes(data_get($document, 'file_size'));
-                                        $documentDate = optional(data_get($document, 'created_at'))->format('d M Y, h:i A');
+                                        $documentDate = $formatDateTime(data_get($document, 'created_at'));
                                     @endphp
                                     <div class="flowb-stage-doc-row">
                                         <span class="flowb-stage-doc-icon"><i class="bi bi-file-earmark-arrow-down"></i></span>

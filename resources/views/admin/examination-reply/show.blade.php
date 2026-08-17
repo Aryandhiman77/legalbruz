@@ -3,6 +3,10 @@
 @section('content')
     @php
         $workflow = \App\Support\ExaminationReportReplyWorkflow::class;
+        $displayTimezone = 'Asia/Kolkata';
+        $formatDateTime = fn ($timestamp, string $format = 'd M Y, h:i A') => $timestamp
+            ? \Illuminate\Support\Carbon::parse($timestamp)->timezone($displayTimezone)->format($format)
+            : null;
         $currentStatus = $case->current_admin_status;
         $displayAdminStatus = $currentStatus;
         $latestDocuments = $case->documents->sortByDesc('id')->values();
@@ -161,6 +165,10 @@
         @media(max-width:420px){.registry-quick-grid{grid-template-columns:1fr}}
         @media(max-width:520px){.registry-request-row{grid-template-columns:1fr auto}.registry-required-check{grid-column:1}.registry-request-remove{grid-column:2;grid-row:1 / span 2}}
     </style>
+    <style>
+        .admin-err { margin-top: 0; }
+        .admin-err > .admin-shell > .stage-panel { top: 90px; }
+    </style>
     <div class="admin-err">
         @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
         @if (session('warning'))<div class="alert alert-warning">{{ session('warning') }}</div>@endif
@@ -175,7 +183,7 @@
         </div>
 
         <div class="admin-shell">
-            <main class="admin-main">
+            <div class="admin-main">
                 <section class="admin-card">
                     <header class="admin-card-head"><h2>Linked Examination Report Reply Case</h2></header>
                     <div class="admin-card-body">
@@ -218,7 +226,7 @@
                                                     <div class="exam-stage-note {{ $noteType }}">
                                                         <span>{{ $noteType === 'admin' ? 'Admin Note' : ($noteType === 'client' ? 'Client Note' : 'System Note') }}</span>
                                                         <p>{{ $history->note ?: 'Stage updated.' }}</p>
-                                                        <small>{{ $history->created_at->format('d M Y, h:i A') }} · {{ ucfirst($history->changed_by) }}</small>
+                                                        <small>{{ $formatDateTime($history->created_at) }} · {{ ucfirst($history->changed_by) }}</small>
                                                     </div>
                                                 @endforeach
                                             </div>
@@ -366,13 +374,13 @@
                             <thead><tr><th>Date</th><th>Status</th><th>Client Stage</th><th>Note</th><th>By</th></tr></thead>
                             <tbody>
                             @foreach ($case->statusHistories as $history)
-                                <tr><td>{{ $history->created_at->format('d M Y h:i A') }}</td><td>{{ $history->new_admin_status }}</td><td>{{ $history->new_client_stage }}</td><td>{{ $history->note }}</td><td>{{ ucfirst($history->changed_by) }}</td></tr>
+                                <tr><td>{{ $formatDateTime($history->created_at, 'd M Y h:i A') }}</td><td>{{ $history->new_admin_status }}</td><td>{{ $history->new_client_stage }}</td><td>{{ $history->note }}</td><td>{{ ucfirst($history->changed_by) }}</td></tr>
                             @endforeach
                             </tbody>
                         </table>
                     </div>
                 </section>
-            </main>
+            </div>
 
             <aside class="stage-panel">
                 <header class="stage-panel-head">

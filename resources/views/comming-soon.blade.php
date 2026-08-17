@@ -334,10 +334,12 @@
                 </div>
 
                 <div class="social-links" >
-                    <a href="https://twitter.com" target="_blank" title="Twitter"><i class="bi bi-twitter"></i></a>
-                    <a href="https://facebook.com" target="_blank" title="Facebook"><i class="bi bi-facebook"></i></a>
-                    <a href="https://linkedin.com" target="_blank" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
-                    <a href="https://instagram.com" target="_blank" title="Instagram"><i class="bi bi-instagram"></i></a>
+                    @foreach (config('social_links') as $social)
+                        <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer"
+                            title="{{ $social['label'] }}" aria-label="Legal Bruz on {{ $social['label'] }}">
+                            <i class="bi {{ $social['icon'] }}" aria-hidden="true"></i>
+                        </a>
+                    @endforeach
                 </div>
 
                 <p class="footer-text">

@@ -58,7 +58,7 @@
 
                         <div class="row mb-3">
                             <div class="col-6">
-                                <p class="text-muted small">Total Service Fee</p>
+                                <p class="text-muted small">Total Professional Fee</p>
                                 @if (!empty($autoApplyCoupon) && ($originalTotalAmount ?? $totalAmount) > $totalAmount)
                                     <h6>
                                         <span class="coupon-price-original">₹{{ number_format($originalTotalAmount, 0) }}</span>

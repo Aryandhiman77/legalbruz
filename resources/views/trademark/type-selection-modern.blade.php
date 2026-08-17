@@ -70,7 +70,7 @@
                         <div class="alert alert-info mt-5">
                             <i class="bi bi-info-circle"></i>
                             <strong>Need Help?</strong> If you're unsure which option applies to you, contact our support
-                            team at <strong>support@legalbruz.com</strong> or call <strong>+91 9876 543 210</strong>.
+                            team at <strong>info@legalbruz.com</strong>.
                         </div>
                     </div>
                 </div>

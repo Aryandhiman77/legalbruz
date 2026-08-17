@@ -1,203 +1,137 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container-fluid mt-4">
-        <!-- Admin Header -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <h2><i class="fas fa-cog"></i> Admin Dashboard</h2>
-                <p class="text-muted">Manage Trademark Applications</p>
+    <div class="container-fluid py-2 admin-dashboard">
+        <section class="admin-welcome">
+            <div>
+                <span class="admin-welcome-eyebrow">Admin workspace</span>
+                <h1>Welcome back, {{ Auth::guard('admin')->user()?->name ?? 'Admin' }}</h1>
+                <p>Use the sidebar to manage trademark matters, client submissions, website content, and incoming enquiries.</p>
             </div>
-        </div>
+            <div class="admin-welcome-mark"><i class="bi bi-command"></i></div>
+        </section>
 
-        <!-- Stats Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <a href="{{ route('admin.applications') }}" class="text-decoration-none">
-                    <div class="card text-center shadow-sm border-left-primary">
-                        <div class="card-body">
-                            <h3 class="text-warning">{{ $pendingCount }}</h3>
-                            <p class="text-muted mb-0">Pending Review</p>
-                        </div>
-                    </div>
-                </a>
+        <section class="admin-visitor-grid" aria-label="Visitor overview">
+            <article class="admin-visitor-card">
+                <span class="admin-visitor-icon website"><i class="bi bi-people"></i></span>
+                <div>
+                    <small>Website visitors</small>
+                    <strong>{{ number_format($websiteVisitors) }}</strong>
+                    <p>Unique browsers that visited the website</p>
+                </div>
+            </article>
+            <article class="admin-visitor-card">
+                <span class="admin-visitor-icon service"><i class="bi bi-briefcase"></i></span>
+                <div>
+                    <small>Service leads</small>
+                    <strong>{{ number_format($serviceLeads) }}</strong>
+                    <p>Unique visitors who opened a service</p>
+                </div>
+            </article>
+        </section>
+
+        <section class="admin-service-panel" aria-labelledby="service-visitors-title">
+            <div class="admin-service-heading">
+                <div>
+                    <span>Service analytics</span>
+                    <h2 id="service-visitors-title">Visitors by service</h2>
+                </div>
+                <p>Unique visitors who opened each service.</p>
             </div>
-            <div class="col-md-3">
-                <a href="{{ route('admin.all-applications') }}" class="text-decoration-none">
-                    <div class="card text-center shadow-sm border-left-success">
-                        <div class="card-body">
-                            <h3 class="text-success">{{ $approvedCount }}</h3>
-                            <p class="text-muted mb-0">Approved</p>
+            <div class="admin-service-grid">
+                @foreach ($serviceVisitorCounts as $service)
+                    <article class="admin-service-card">
+                        <span class="admin-service-icon"><i class="bi {{ $service['icon'] }}"></i></span>
+                        <div class="admin-service-copy">
+                            <strong>{{ $service['label'] }}</strong>
+                            <small>{{ $service['description'] }}</small>
                         </div>
-                    </div>
-                </a>
+                        <span class="admin-service-count">{{ number_format($service['visitors']) }}</span>
+                    </article>
+                @endforeach
             </div>
-            <div class="col-md-3">
-                <div class="card text-center shadow-sm border-left-info">
-                    <div class="card-body">
-                        <h3 class="text-info">{{ $filedCount }}</h3>
-                        <p class="text-muted mb-0">Filed</p>
-                    </div>
+        </section>
+
+        <section class="admin-quicklinks-panel">
+            <div class="admin-quicklinks-heading">
+                <span class="admin-panel-icon"><i class="bi bi-lightning-charge"></i></span>
+                <div>
+                    <h2>Quick links</h2>
+                    <p>Open any administration area directly.</p>
                 </div>
             </div>
-            <div class="col-md-3">
-                <a href="{{ route('admin.all-applications', ['status' => \App\Support\TrademarkWorkflow::REGISTRY_REGISTERED]) }}" class="text-decoration-none">
-                    <div class="card text-center shadow-sm border-left-success">
-                        <div class="card-body">
-                            <h3 class="text-success">{{ $registeredCount ?? 0 }}</h3>
-                            <p class="text-muted mb-0">Registered</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-        </div>
 
-        <!-- Quick Actions -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card shadow">
-                    <div class="card-header admin-dashboard-section-head">
-                        <h5 class="mb-0">Quick Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="admin-quick-actions">
-                        <a href="{{ route('admin.applications') }}" class="btn btn-primary admin-quick-action-btn">
-                            <i class="fas fa-list"></i> View Pending Applications
-                        </a>
-                        <a href="{{ route('admin.all-applications') }}" class="btn btn-info admin-quick-action-btn">
-                            <i class="fas fa-chart-bar"></i> View All Applications
-                        </a>
-                        <a href="{{ route('admin.stuck-trademark.index') }}" class="btn btn-dark admin-quick-action-btn">
-                            <i class="fas fa-life-ring"></i> View Recovery Cases
-                        </a>
-                        <a href="{{ route('admin.trademark-opposition.index') }}" class="btn btn-success admin-quick-action-btn">
-                            <i class="fas fa-shield-alt"></i> View Defence Cases
-                        </a>
-                        <a href="{{ route('admin.trademark-opposition.oppose.index') }}" class="btn btn-secondary admin-quick-action-btn">
-                            <i class="fas fa-gavel"></i> View Oppose Cases
-                        </a>
-                        <a href="{{ route('admin.examination-reply.index') }}" class="btn btn-primary admin-quick-action-btn">
-                            <i class="fas fa-file-signature"></i> View Objection Reply Cases
-                        </a>
-                        <a href="{{ route('admin.discount-coupons.index') }}" class="btn btn-warning text-dark admin-quick-action-btn">
-                            <i class="fas fa-tags"></i> Discount Coupons
-                        </a>
-                        </div>
+            @foreach (\App\Support\AdminNavigation::groups() as $group)
+                <div class="admin-quicklinks-group">
+                    <h3>{{ $group['label'] }}</h3>
+                    <div class="admin-quicklinks-grid">
+                        @foreach ($group['items'] as $item)
+                            <a href="{{ route($item['route']) }}"
+                                class="admin-quicklink {{ request()->routeIs(...$item['active']) ? 'active' : '' }}">
+                                <span class="admin-quicklink-icon"><i class="bi {{ $item['icon'] }}"></i></span>
+                                <span class="admin-quicklink-copy">
+                                    <strong>{{ $item['label'] }}</strong>
+                                    <small>{{ $item['description'] }}</small>
+                                </span>
+                                <i class="bi bi-arrow-up-right admin-quicklink-arrow"></i>
+                            </a>
+                        @endforeach
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Workflow Info -->
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card shadow">
-                    <div class="card-header admin-dashboard-section-head">
-                        <h5 class="mb-0">Admin Workflow</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h6>1. Review Application</h6>
-                                <p class="text-muted">Check applicant details, brand information, and usage type.</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>2. Verify Documents</h6>
-                                <p class="text-muted">Ensure all KYC documents are valid, clear, and properly uploaded.</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>3. Approve & File</h6>
-                                <p class="text-muted">Generate affidavit & POA, approve, and file with trademark registry.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Pending -->
-        @if ($pendingCount > 0)
-            <div class="row mt-4">
-                <div class="col-md-12">
-                    <div class="card shadow">
-                        <div class="card-header bg-warning text-white admin-recent-pending-head">
-                            <h5 class="mb-0">
-                                <i class="fas fa-exclamation-circle"></i>
-                                Recent Pending Applications
-                            </h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                <!-- This would be populated from query -->
-                                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                    <div>
-                                        <h6 class="mb-1">Awaiting applications</h6>
-                                        <small class="text-muted">{{ $pendingCount }} applications pending your
-                                            review</small>
-                                    </div>
-                                    <a href="{{ route('admin.applications') }}" class="btn btn-sm btn-primary">Review</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
+            @endforeach
+        </section>
     </div>
 
     <style>
-        .border-left-primary {
-            border-left: 4px solid #007bff !important;
-        }
-
-        .border-left-success {
-            border-left: 4px solid #28a745 !important;
-        }
-
-        .border-left-info {
-            border-left: 4px solid #17a2b8 !important;
-        }
-
-        .border-left-secondary {
-            border-left: 4px solid #6c757d !important;
-        }
-
-        .admin-dashboard-section-head {
-            background: #294d78 !important;
-            color: #ffffff !important;
-            border-bottom: 0;
-            padding: 18px 24px;
-        }
-
-        .admin-dashboard-section-head h5 {
-            color: #ffffff;
-            font-size: 1.25rem;
-            font-weight: 800;
-            line-height: 1.2;
-            letter-spacing: 0;
-        }
-
-        .admin-recent-pending-head,
-        .admin-recent-pending-head h5,
-        .admin-recent-pending-head i {
-            color: #ffffff !important;
-        }
-
-        .admin-quick-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px 16px;
-            align-items: center;
-        }
-
-        .admin-quick-action-btn {
-            min-height: 42px;
-            padding: 9px 18px;
-            border-radius: 7px;
-            font-size: 0.92rem;
-            font-weight: 700;
-            line-height: 1.15;
-        }
+        .admin-dashboard { max-width: 1450px; }
+        .admin-welcome { position:relative;display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:190px;padding:34px 38px;overflow:hidden;border-radius:18px;color:#fff;background:radial-gradient(circle at 88% 5%,rgba(89,224,204,.25),transparent 27%),linear-gradient(120deg,#071f48,#0c4565 66%,#128d83);box-shadow:0 18px 38px rgba(7,31,72,.13) }
+        .admin-welcome::after { content:"";position:absolute;right:-70px;bottom:-160px;width:360px;height:300px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.025) }
+        .admin-welcome > * { position:relative;z-index:1 }
+        .admin-welcome-eyebrow { color:#8ce8dc;font-size:.64rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase }
+        .admin-welcome h1 { margin:10px 0 8px;color:#fff;font-size:clamp(1.55rem,2.5vw,2.25rem);letter-spacing:-.035em }
+        .admin-welcome p { max-width:700px;margin:0;color:rgba(255,255,255,.76);font-size:.82rem;line-height:1.7 }
+        .admin-welcome-mark { display:grid;place-items:center;width:82px;height:82px;border:1px solid rgba(255,255,255,.16);border-radius:22px;background:rgba(255,255,255,.08);font-size:2rem }
+        .admin-visitor-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px }
+        .admin-visitor-card { display:flex;align-items:center;gap:16px;min-height:126px;padding:23px;border:1px solid #dfe7ef;border-radius:15px;background:#fff;box-shadow:0 10px 28px rgba(7,31,72,.055) }
+        .admin-visitor-icon { display:grid;place-items:center;flex:0 0 52px;height:52px;border-radius:13px;font-size:1.25rem }
+        .admin-visitor-icon.website { color:#11796f;background:#e6f7f4 }
+        .admin-visitor-icon.service { color:#245b99;background:#eaf1fb }
+        .admin-visitor-card small,.admin-visitor-card strong { display:block }
+        .admin-visitor-card small { color:#61738b;font-size:.72rem;font-weight:850;text-transform:uppercase;letter-spacing:.06em }
+        .admin-visitor-card strong { margin-top:5px;color:#102a4c;font-size:1.65rem;line-height:1 }
+        .admin-visitor-card p { margin:7px 0 0;color:#7a8798;font-size:.74rem }
+        .admin-service-panel { margin-top:16px;padding:22px 24px;border:1px solid #dfe7ef;border-radius:15px;background:#fff;box-shadow:0 10px 28px rgba(7,31,72,.055) }
+        .admin-service-heading { display:flex;align-items:end;justify-content:space-between;gap:20px;padding-bottom:17px;border-bottom:1px solid #edf1f5 }
+        .admin-service-heading span { color:#159485;font-size:.65rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase }
+        .admin-service-heading h2 { margin:3px 0 0;color:#102a4c;font-size:1rem }
+        .admin-service-heading p { margin:0;color:#748196;font-size:.74rem }
+        .admin-service-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:17px }
+        .admin-service-card { display:flex;align-items:center;gap:13px;min-height:82px;padding:15px;border:1px solid #e2e9f0;border-radius:12px;background:#fbfdff }
+        .admin-service-icon { display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:11px;color:#159485;background:#e7f7f4;font-size:1rem }
+        .admin-service-copy { min-width:0;flex:1 }
+        .admin-service-copy strong,.admin-service-copy small { display:block }
+        .admin-service-copy strong { color:#172b46;font-size:.84rem }
+        .admin-service-copy small { margin-top:3px;color:#748196;font-size:.7rem;line-height:1.4 }
+        .admin-service-count { color:#0c4464;font-size:1.4rem;font-weight:900;line-height:1 }
+        .admin-quicklinks-panel { margin-top:22px;padding:25px;border:1px solid #dfe7ef;border-radius:15px;background:#fff;box-shadow:0 10px 28px rgba(7,31,72,.055) }
+        .admin-quicklinks-heading { display:flex;align-items:flex-start;gap:13px;padding-bottom:20px;border-bottom:1px solid #edf1f5 }
+        .admin-panel-icon { display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:10px;color:#158f82;background:#e9f7f4 }
+        .admin-quicklinks-heading h2 { margin:1px 0 4px;font-size:1rem }
+        .admin-quicklinks-heading p { margin:0;color:#718096;font-size:.72rem }
+        .admin-quicklinks-group { margin-top:23px }
+        .admin-quicklinks-group h3 { margin:0 0 10px;color:#61738b;font-size:.69rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase }
+        .admin-quicklinks-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px }
+        .admin-quicklink { position:relative;display:flex;align-items:center;gap:12px;min-height:82px;padding:15px 42px 15px 15px;border:1px solid #e0e7ef;border-radius:12px;color:#172b46;background:#fff;text-decoration:none;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease }
+        .admin-quicklink:hover { color:#172b46;border-color:#a8d8d1;box-shadow:0 9px 22px rgba(7,31,72,.075);transform:translateY(-2px) }
+        .admin-quicklink.active { border-color:#83cfc4;background:#f0faf8 }
+        .admin-quicklink-icon { display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:10px;color:#159f8d;background:#e9f7f4;font-size:1rem }
+        .admin-quicklink-copy strong,.admin-quicklink-copy small { display:block }
+        .admin-quicklink-copy strong { color:#172b46;font-size:.84rem }
+        .admin-quicklink-copy small { margin-top:4px;color:#748196;font-size:.72rem;line-height:1.45 }
+        .admin-quicklink-arrow { position:absolute;top:15px;right:15px;color:#9aabba;font-size:.72rem }
+        @media(max-width:1100px){.admin-quicklinks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:900px){.admin-welcome-mark{display:none}}
+        @media(max-width:650px){.admin-quicklinks-grid,.admin-service-grid{grid-template-columns:1fr}.admin-service-heading{align-items:flex-start;flex-direction:column;gap:6px}}
+        @media(max-width:575px){.admin-welcome{min-height:170px;padding:26px 22px}.admin-visitor-grid{grid-template-columns:1fr}.admin-quicklinks-panel{padding:20px}}
     </style>
 @endsection

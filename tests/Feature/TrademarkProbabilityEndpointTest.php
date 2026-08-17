@@ -120,7 +120,8 @@ class TrademarkProbabilityEndpointTest extends TestCase
         $this->assertStringNotContainsString('Same-class matches', $source);
         $this->assertStringNotContainsString('Not checked', $source);
         $this->assertStringContainsString('Active classes found', $source);
-        $this->assertStringContainsString('id="tm-confidence-score"', $source);
+        $this->assertStringNotContainsString('id="tm-confidence-score"', $source);
+        $this->assertStringNotContainsString('>Confidence<', $source);
     }
 
     public function test_modal_retains_mobile_responsive_layout(): void

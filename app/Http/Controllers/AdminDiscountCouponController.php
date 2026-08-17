@@ -14,6 +14,21 @@ class AdminDiscountCouponController extends Controller
     public function index(Request $request): View
     {
         $coupons = DiscountCoupon::query()
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $status = (string) $request->string('status');
+                $now = now('Asia/Kolkata');
+
+                match ($status) {
+                    'active' => $query->where('is_active', true)
+                        ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', $now))
+                        ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', $now)),
+                    'scheduled' => $query->where('is_active', true)->where('starts_at', '>', $now),
+                    'expired' => $query->whereNotNull('ends_at')->where('ends_at', '<=', $now),
+                    'inactive' => $query->where('is_active', false)
+                        ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', $now)),
+                    default => null,
+                };
+            })
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = (string) $request->string('search');
 

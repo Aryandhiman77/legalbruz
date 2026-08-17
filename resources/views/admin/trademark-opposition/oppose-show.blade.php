@@ -3,6 +3,10 @@
 @section('content')
     @php
         $workflow = \App\Support\TrademarkOppositionWorkflow::class;
+        $displayTimezone = 'Asia/Kolkata';
+        $formatDateTime = fn ($timestamp, string $format = 'd M Y, h:i A') => $timestamp
+            ? \Illuminate\Support\Carbon::parse($timestamp)->timezone($displayTimezone)->format($format)
+            : null;
         $currentStatus = $case->current_admin_status;
         if ($currentStatus === $workflow::ADMIN_NOTICE_FILED && filled($case->filing_acknowledgment_path)) {
             $currentStatus = $workflow::ADMIN_COUNTER_STATEMENT_AWAITED;
@@ -217,7 +221,7 @@
             ->map(fn ($history) => [
                 'title' => $history->new_status,
                 'body' => trim(\Illuminate\Support\Str::after((string) $history->note, 'Note to admin:')),
-                'meta' => $history->created_at->format('d M Y, h:i A'),
+                'meta' => $formatDateTime($history->created_at),
             ])
             ->filter(fn ($entry) => $entry['body'] !== '')
             ->values());
@@ -313,6 +317,12 @@
         .stage-panel form[data-third-party-status-form]>.third-party-section:first-of-type{padding-top:10px!important}.stage-panel form[data-third-party-status-form]>.third-party-section:first-of-type h3{margin-bottom:9px!important}.stage-panel form[data-third-party-status-form]>.third-party-section.evidence-request-panel{margin-top:-2px!important;padding-top:0!important}
         .stage-panel .third-party-section h3{font-size:.92rem!important;line-height:1.2!important}.stage-panel .third-party-deadline-card{padding:9px!important;gap:8px!important;grid-template-columns:minmax(0,1fr) auto!important}.stage-panel .third-party-deadline-card span{font-size:.7rem!important}.stage-panel .third-party-deadline-card strong{font-size:.82rem!important;line-height:1.25!important}.stage-panel .third-party-deadline-card>.admin-status-pill{min-width:0!important;max-width:128px!important;padding:5px 8px!important;font-size:.66rem!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;line-height:1.2!important;text-align:center!important;justify-self:end!important}.stage-panel .admin-label{font-size:.82rem!important;margin-bottom:6px!important}.stage-panel .admin-input{min-height:36px!important;padding:7px 9px!important;font-size:.84rem!important}.stage-panel textarea.admin-input{min-height:84px!important;padding:9px!important}.stage-panel .admin-actions{gap:8px!important;margin-top:10px!important}.stage-panel .admin-btn{min-height:36px!important;padding:0 12px!important;font-size:.82rem!important;border-radius:8px!important}.stage-panel .evidence-attach-panel .admin-btn-secondary{min-height:30px!important;border-radius:7px!important;padding:0 8px!important;font-size:.64rem!important;font-weight:800!important;line-height:1.05!important;white-space:normal!important;max-width:132px!important;justify-self:end!important}.stage-panel form:not([data-third-party-status-form])>.evidence-attach-panel{margin-top:20px!important;padding-top:20px!important}.stage-panel form:not([data-third-party-status-form])>.evidence-attach-panel .admin-additional-documents-header{margin-bottom:14px!important}.stage-panel form:not([data-third-party-status-form])>.evidence-attach-panel [data-oppose-tracking-document-list]{margin-top:12px!important;line-height:1.35!important}.stage-panel form:not([data-third-party-status-form])>.admin-draft-actions{margin-top:22px!important}.admin-draft-actions{position:relative!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;padding-bottom:16px}.admin-draft-actions .admin-btn{min-height:38px!important;border-radius:8px!important;padding:0 10px!important;font-size:.78rem!important;font-weight:850!important;line-height:1.1!important;white-space:nowrap!important}.admin-draft-actions .admin-draft-btn{flex:0 0 auto}.admin-draft-actions .admin-draft-btn~.admin-btn{flex:1 1 auto;min-width:0}.admin-draft-btn{border-style:solid!important;border-color:#cbd5e1!important;background:#fff!important;color:#203e68!important}.admin-draft-btn:hover{background:#f8fafc!important;color:#203e68!important}.admin-draft-status{position:absolute;left:0;bottom:0;color:#64748b;font-size:.68rem;font-weight:800;line-height:1}
     </style>
+    <style>
+        .admin-opp { margin-top: 0; }
+        .admin-opp > .admin-shell { margin-top: 0; }
+        .admin-opp > .admin-shell > .admin-main { margin-top: 0; }
+        .admin-opp > .admin-shell > .stage-panel { top: 90px; }
+    </style>
 
     <div class="admin-opp">
         @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
@@ -326,7 +336,7 @@
         </div>
 
         <div class="admin-shell">
-            <main class="admin-main">
+            <div class="admin-main">
                 <section class="admin-card">
                     <header class="admin-card-head"><h2>Opposition Application</h2></header>
                     <div class="admin-card-body">
@@ -491,7 +501,7 @@
                             @forelse ($formattedStatusHistories as $history)
                                 <li>
                                     <strong>{{ $history['status'] }}</strong>
-                                    <small>{{ $history['timestamp']->format('d M Y, h:i A') }} · {{ $history['actor'] }}</small>
+                                    <small>{{ $formatDateTime($history['timestamp']) }} · {{ $history['actor'] }}</small>
                                     @if($history['summary'])
                                         <p class="admin-history-summary">{{ $history['summary'] }}</p>
                                     @endif
@@ -512,7 +522,7 @@
                         </ul>
                     </div>
                 </section>
-            </main>
+            </div>
 
             <aside class="stage-panel">
                 <header class="stage-panel-head">
@@ -955,7 +965,7 @@
                         @if($latestMatterClosedHistory?->created_at)
                             <div class="admin-field mt-2">
                                 <span>Closed On</span>
-                                <strong>{{ $latestMatterClosedHistory->created_at->format('d M Y, h:i A') }}</strong>
+                                <strong>{{ $formatDateTime($latestMatterClosedHistory->created_at) }}</strong>
                             </div>
                         @endif
                         @if(filled($latestMatterClosedHistory?->note))
@@ -974,7 +984,7 @@
                                     <div class="third-party-file">
                                         <div>
                                             <strong>{{ $document->review_note ?: $document->file_name }}</strong>
-                                            <small>{{ strtoupper($document->file_type ?: 'FILE') }} · Sent {{ optional($document->created_at)->format('d M Y, h:i A') }}</small>
+                                            <small>{{ strtoupper($document->file_type ?: 'FILE') }} · Sent {{ $formatDateTime($document->created_at) }}</small>
                                         </div>
                                         <a class="admin-link" href="{{ $documentUrl }}" target="_blank">View</a>
                                     </div>

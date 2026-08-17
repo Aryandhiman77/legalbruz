@@ -9,6 +9,7 @@ use App\Models\TrademarkExecutionAction;
 use App\Models\TrademarkExecutionDocument;
 use App\Models\TrademarkExecutionUpdate;
 use App\Support\StuckTrademarkWorkflow;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -279,6 +280,10 @@ class AdminTrademarkExecutionController extends Controller
     {
         $executionIsComplete = (bool) $case->execution_completed_at || $case->execution_sub_stage === 'execution_completed';
 
+        if ($case->resolved_at || $case->closed_at || in_array($case->status, [StuckTrademarkWorkflow::RESOLVED, StuckTrademarkWorkflow::CLOSED], true)) {
+            return redirect()->back()->with('error', 'A resolved or closed case cannot be moved back to monitoring.');
+        }
+
         if (!$executionIsComplete && !in_array($case->status, [StuckTrademarkWorkflow::MONITORING, StuckTrademarkWorkflow::RESOLVED], true)) {
             return redirect()->back()->with('error', 'Monitoring updates are available only after execution is completed.');
         }
@@ -308,7 +313,9 @@ class AdminTrademarkExecutionController extends Controller
         $updates = [
             'status' => $to,
             'current_stage' => $to === StuckTrademarkWorkflow::RESOLVED ? 'Resolved & Closed' : 'Monitoring & Updates',
-            'next_follow_up_at' => $validated['next_follow_up_at'] ?? $case->next_follow_up_at,
+            'next_follow_up_at' => filled($validated['next_follow_up_at'] ?? null)
+                ? Carbon::parse($validated['next_follow_up_at'], 'Asia/Kolkata')->utc()
+                : $case->next_follow_up_at,
             'resolved_at' => $to === StuckTrademarkWorkflow::RESOLVED ? ($case->resolved_at ?: now()) : $case->resolved_at,
         ];
 
@@ -368,6 +375,8 @@ class AdminTrademarkExecutionController extends Controller
         $case->update([
             'status' => $to,
             'current_stage' => 'Resolved & Closed',
+            'monitoring_status' => 'Completed',
+            'resolved_at' => $case->resolved_at ?: now(),
             'closed_at' => $to === StuckTrademarkWorkflow::CLOSED ? ($case->closed_at ?: now()) : $case->closed_at,
         ]);
 

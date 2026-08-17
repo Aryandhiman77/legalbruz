@@ -24,7 +24,7 @@
             </tr>
             <tr>
                 <th>Registration Date</th>
-                <td>{{ $user->created_at->format('d M Y') }}</td>
+                <td>{{ $user->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</td>
             </tr>
             <tr>
                 <th>Status</th>

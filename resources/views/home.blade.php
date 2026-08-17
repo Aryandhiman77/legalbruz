@@ -6,14 +6,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Legal Bruz (LLP) - IPR & Trademark Registration | India's Fastest Platform</title>
+    <meta name="description" content="Protect your brand with Legal Bruz. Search trademarks, file applications, respond to objections, and manage intellectual property matters online.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="{{ route('landing') }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Legal Bruz">
+    <meta property="og:title" content="Legal Bruz - Trademark & Intellectual Property Services">
+    <meta property="og:description" content="Trademark registration and intellectual property support made clear, accessible, and easy to manage.">
+    <meta property="og:url" content="{{ route('landing') }}">
+    <meta property="og:image" content="{{ asset('logo.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Legal Bruz - Trademark & Intellectual Property Services">
+    <meta name="twitter:description" content="Trademark registration and intellectual property support made clear and accessible.">
+    <meta name="twitter:image" content="{{ asset('logo.png') }}">
+    <script type="application/ld+json">
+        {!! json_encode([
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => 'Legal Bruz',
+            'url' => route('landing'),
+            'logo' => asset('logo.png'),
+            'email' => 'info@legalbruz.com',
+            'sameAs' => collect(config('social_links'))->pluck('url')->values()->all(),
+            'address' => [
+                '@type' => 'PostalAddress',
+                'streetAddress' => '34 Krishna Nagar',
+                'addressLocality' => 'Ambala Cantt',
+                'addressRegion' => 'Haryana',
+                'postalCode' => '133001',
+                'addressCountry' => 'IN',
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="{{ asset('css/RegistrationGuide.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/home.css') }}">
+    @php
+        $registrationGuideCssVersion = file_exists(public_path('css/RegistrationGuide.css'))
+            ? filemtime(public_path('css/RegistrationGuide.css'))
+            : '1';
+        $homeCssVersion = file_exists(public_path('css/home.css'))
+            ? filemtime(public_path('css/home.css'))
+            : '1';
+    @endphp
+    <link rel="stylesheet" href="{{ asset('css/RegistrationGuide.css') }}?v={{ $registrationGuideCssVersion }}">
+    <link rel="stylesheet" href="{{ asset('css/home.css') }}?v={{ $homeCssVersion }}">
     @if (!empty($searchPage))
         @vite('resources/js/trademark-probability.js')
+    @endif
+    @if (!empty($searchPage))
+        <style>
+            body.trademark-search-page .hero,
+            body.trademark-search-page .trust-section,
+            body.trademark-search-page .services-section,
+            body.trademark-search-page .flow-section,
+            body.trademark-search-page .process-section,
+            body.trademark-search-page .benefits-section,
+            body.trademark-search-page .pricing-section,
+            body.trademark-search-page .testimonials-section,
+            body.trademark-search-page .cta-section {
+                display: none !important;
+            }
+
+            body.trademark-search-page .search-section {
+                display: block !important;
+                min-height: auto !important;
+                padding: 0 !important;
+                background: #eef5f6 !important;
+            }
+
+            body.trademark-search-page .search-section > .container {
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            body.trademark-search-page .search-section .section-header,
+            body.trademark-search-page .search-panel {
+                display: none !important;
+            }
+
+            body.trademark-search-page .tm-results-shell {
+                margin-top: 0 !important;
+                width: 100% !important;
+                min-height: calc(100vh - 96px) !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+        </style>
     @endif
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
@@ -814,7 +895,7 @@
 
 </head>
 
-<body @class(['trademark-search-page' => !empty($searchPage)])>
+<body class="{{ !empty($searchPage) ? 'trademark-search-page' : '' }}">
     @php
         $trademarkPricingCoupon = auth()->check()
             ? \App\Models\DiscountCoupon::autoApplyForPayment('trademark_filing', auth()->id())
@@ -1016,7 +1097,7 @@
                             <div class="stat-label">Success Rate</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-number">₹7,000</div>
+                            <div class="stat-number">₹{{ number_format(($trademarkPricingPlans ?? \App\Models\TrademarkPricing::activePlans())['individual']['amount'] ?? \App\Models\TrademarkPricing::defaults()['individual']['amount'], 0) }}</div>
                             <div class="stat-label">Starting Price</div>
                         </div>
                     </div>
@@ -1140,10 +1221,10 @@
                             <li>Infringement Support</li>
                             <li>Digital Archive</li>
                         </ul>
-                        <button class="service-btn service-btn--disabled" type="button" disabled>
-                            <i class="bi bi-clock"></i>
-                            <span>Coming Soon</span>
-                        </button>
+                        <a href="{{ route('contact') }}" class="service-btn">
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span>Contact Us</span>
+                        </a>
                     </div>
                 </div>
 
@@ -1162,10 +1243,10 @@
                             <li>Expert Review</li>
                             <li>20 Year Protection</li>
                         </ul>
-                        <button class="service-btn service-btn--disabled" type="button" disabled>
-                            <i class="bi bi-clock"></i>
-                            <span>Coming Soon</span>
-                        </button>
+                        <a href="{{ route('contact') }}" class="service-btn">
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span>Contact Us</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1225,200 +1306,146 @@
             </div>
 
             @if (!empty($searchPage))
-            <div class="tm-results-shell" id="tm-results-shell">
-                <div class="tm-results-header">
-                    <div>
-                        <h3>Trademark Search</h3>
-                        <p>Search results for trademarks matching your keyword.</p>
+                <div class="tm-results-shell" id="tm-results-shell" hidden>
+                    <div class="tm-results-header">
+                        <div>
+                            <h3>Trademark Search Dashboard</h3>
+                            <p>Review matching trademark records with filters, sorting, and AI probability.</p>
+                        </div>
+                        <button type="button" class="tm-save-search" id="tm-save-search">
+                            <i class="bi bi-bookmark"></i><span>Save Search</span>
+                        </button>
                     </div>
-                    <button type="button" class="tm-save-search" id="tm-save-search">
-                        <i class="bi bi-bookmark"></i>
-                        <span>Save Search</span>
-                    </button>
-                </div>
 
-                <div class="tm-search-strip">
-                    <div class="tm-search-type">
-                        <span>Trademark</span>
-                        <i class="bi bi-chevron-down"></i>
+                    <div class="tm-search-strip">
+                        <div class="tm-search-type">Keyword <i class="bi bi-chevron-down"></i></div>
+                        <input type="text" id="tm-results-keyword" placeholder="Search trademark keyword">
+                        <button type="button" class="tm-clear-inline" id="tm-clear-inline" aria-label="Clear keyword">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="tm-strip-submit" id="tm-strip-submit">
+                            <i class="bi bi-search"></i><span>Search</span>
+                        </button>
+                        <button type="button" class="tm-strip-submit tm-ai-probability-button" id="tm-ai-probability" disabled>
+                            <i class="bi bi-stars"></i><span>AI Probability</span>
+                        </button>
                     </div>
-                    <input type="text" id="tm-results-keyword" aria-label="Trademark search keyword">
-                    <button type="button" class="tm-clear-inline" id="tm-clear-inline" aria-label="Clear keyword">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                    <button type="button" class="tm-strip-submit" id="tm-strip-submit">
-                        <i class="bi bi-search"></i>
-                        <span>Search</span>
-                    </button>
-                    <button type="button" class="tm-ai-probability-button" id="tm-ai-probability"
-                        title="AI Trademark Probability" aria-label="AI Trademark Probability" disabled>
-                        <i class="bi bi-stars" aria-hidden="true"></i>
-                        <span>AI Probability</span>
-                    </button>
+
+                    <div class="tm-results-grid">
+                        <button type="button" class="tm-mobile-filter-trigger" id="tm-mobile-filter-trigger">
+                            <i class="bi bi-sliders"></i>
+                            <span>Refine Search</span>
+                        </button>
+                        <aside class="tm-refine-panel" id="tm-refine-panel">
+                            <button type="button" class="tm-mobile-filter-backdrop" id="tm-mobile-filter-backdrop" aria-label="Close filters"></button>
+                            <div class="tm-sheet-grab" id="tm-sheet-grab"></div>
+                            <div class="tm-filter-sheet-content" id="tm-filter-sheet-content">
+                                <div class="tm-refine-head" id="tm-refine-head">
+                                    <h4>Refine Search</h4>
+                                    <div class="tm-refine-head-actions">
+                                        <button type="button" id="tm-clear-filters">Clear</button>
+                                        <button type="button" class="tm-mobile-panel-close" id="tm-mobile-panel-close" aria-label="Close filters">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="tm-filter-group">
+                                    <button type="button" class="tm-filter-title">Status <i class="bi bi-chevron-up"></i></button>
+                                    <div class="tm-filter-options" id="tm-status-options"></div>
+                                </div>
+
+                                <div class="tm-filter-group">
+                                    <button type="button" class="tm-filter-title">Class <i class="bi bi-chevron-up"></i></button>
+                                    <label class="tm-class-search">
+                                        <i class="bi bi-search"></i>
+                                        <input type="text" id="tm-class-search" placeholder="Search class">
+                                    </label>
+                                    <div class="tm-filter-options" id="tm-class-options"></div>
+                                    <button type="button" class="tm-show-more" id="tm-class-show-more" hidden>Show more</button>
+                                </div>
+
+                                <div class="tm-filter-group">
+                                    <button type="button" class="tm-filter-title">Type <i class="bi bi-chevron-up"></i></button>
+                                    <div class="tm-filter-options" id="tm-type-options"></div>
+                                </div>
+
+                                <div class="tm-filter-group">
+                                    <button type="button" class="tm-filter-title">Application Date <i class="bi bi-chevron-up"></i></button>
+                                    <div class="tm-filter-options">
+                                        <label class="tm-radio-row"><input type="radio" name="tm-date-filter" value="anytime" checked><span>Anytime</span></label>
+                                        <label class="tm-radio-row"><input type="radio" name="tm-date-filter" value="3m"><span>Last 3 months</span></label>
+                                        <label class="tm-radio-row"><input type="radio" name="tm-date-filter" value="6m"><span>Last 6 months</span></label>
+                                        <label class="tm-radio-row"><input type="radio" name="tm-date-filter" value="1y"><span>Last 1 year</span></label>
+                                        <label class="tm-radio-row"><input type="radio" name="tm-date-filter" value="custom"><span>Custom range</span></label>
+                                    </div>
+                                    <div class="tm-date-range">
+                                        <input type="date" id="tm-date-from" aria-label="Date from">
+                                        <span>to</span>
+                                        <input type="date" id="tm-date-to" aria-label="Date to">
+                                    </div>
+                                </div>
+
+                                <button type="button" class="tm-apply-filters" id="tm-apply-filters">Apply Filters</button>
+                            </div>
+                        </aside>
+
+                        <div class="tm-results-main">
+                            <div class="tm-results-toolbar">
+                                <div>
+                                    <h4 id="tm-results-title">Search Results</h4>
+                                    <p id="tm-results-summary">Showing 0 results</p>
+                                </div>
+                                <label class="tm-sort-control">
+                                    Sort
+                                    <select id="tm-sort-select">
+                                        <option value="relevance">Relevance</option>
+                                        <option value="newest">Newest</option>
+                                        <option value="oldest">Oldest</option>
+                                        <option value="status">Status</option>
+                                        <option value="class">Class</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div class="tm-stat-row">
+                                <div class="tm-stat-card tm-stat-blue"><span>Total Results</span><strong id="tm-stat-total">0</strong><i class="bi bi-search"></i></div>
+                                <div class="tm-stat-card tm-stat-green"><span>Registered</span><strong id="tm-stat-registered">0</strong><i class="bi bi-patch-check"></i></div>
+                                <div class="tm-stat-card tm-stat-purple"><span>Classes Found</span><strong id="tm-stat-classes">0</strong><i class="bi bi-grid"></i></div>
+                                <div class="tm-stat-card tm-stat-orange"><span>Latest Date</span><strong id="tm-stat-updated">-</strong><i class="bi bi-calendar2-week"></i></div>
+                            </div>
+
+                            <div class="tm-loading" id="tm-loading" hidden>
+                                <div class="spinner-border text-success" role="status"></div>
+                                <strong>Searching trademark records...</strong>
+                            </div>
+                            <div class="tm-empty-state" id="tm-empty-state" hidden>
+                                <i class="bi bi-search-heart"></i>
+                                <h5>No records found</h5>
+                                <p>Try a shorter keyword or a different brand spelling.</p>
+                            </div>
+                            <div class="tm-card-list" id="tm-card-list"></div>
+
+                            <div class="tm-pagination-bar">
+                                <label class="tm-rows-control">
+                                    Rows
+                                    <select id="tm-rows-select">
+                                        <option value="5">5</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                    </select>
+                                </label>
+                                <div class="tm-pager">
+                                    <button type="button" id="tm-prev-page" aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>
+                                    <span id="tm-page-indicator">1</span>
+                                    <button type="button" id="tm-next-page" aria-label="Next page"><i class="bi bi-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <button type="button" class="tm-mobile-filter-backdrop" id="tm-mobile-filter-backdrop"
-                    aria-label="Close trademark filters" tabindex="-1"></button>
-
-                <div class="tm-results-grid">
-                    <aside class="tm-refine-panel" id="tm-refine-panel" aria-label="Refine trademark results">
-                        <div class="tm-sheet-grab" id="tm-sheet-grab" role="button" tabindex="0"
-                            aria-controls="tm-filter-sheet-content" aria-expanded="false">
-                            <span aria-hidden="true"></span>
-                            <small>Swipe up for filters</small>
-                        </div>
-                        <div class="tm-refine-head" id="tm-refine-head">
-                            <h4>Refine Results</h4>
-                            <button type="button" id="tm-clear-filters">Clear All</button>
-                            <button type="button" class="tm-mobile-panel-close" id="tm-mobile-panel-close"
-                                aria-label="Close filters"><i class="bi bi-x-lg"></i></button>
-                        </div>
-
-                        <div class="tm-filter-sheet-content" id="tm-filter-sheet-content">
-                        <div class="tm-filter-group" data-group="status">
-                            <button type="button" class="tm-filter-title">
-                                <span>Status</span>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                            <div class="tm-filter-options" id="tm-status-options"></div>
-                        </div>
-
-                        <div class="tm-filter-group" data-group="class">
-                            <button type="button" class="tm-filter-title">
-                                <span>Class</span>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                            <div class="tm-class-search">
-                                <i class="bi bi-search"></i>
-                                <input type="text" id="tm-class-search" placeholder="Search class">
-                            </div>
-                            <div class="tm-filter-options" id="tm-class-options"></div>
-                            <button type="button" class="tm-show-more" id="tm-class-show-more">Show more</button>
-                        </div>
-
-                        <div class="tm-filter-group" data-group="type">
-                            <button type="button" class="tm-filter-title">
-                                <span>Type</span>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                            <div class="tm-filter-options" id="tm-type-options"></div>
-                        </div>
-
-                        <div class="tm-filter-group" data-group="date">
-                            <button type="button" class="tm-filter-title">
-                                <span>Application Date</span>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                            <div class="tm-filter-options" id="tm-date-options">
-                                <label class="tm-radio-row">
-                                    <input type="radio" name="tm-date-filter" value="anytime" checked>
-                                    <span>Anytime</span>
-                                </label>
-                                <label class="tm-radio-row">
-                                    <input type="radio" name="tm-date-filter" value="3m">
-                                    <span>Last 3 Months</span>
-                                </label>
-                                <label class="tm-radio-row">
-                                    <input type="radio" name="tm-date-filter" value="6m">
-                                    <span>Last 6 Months</span>
-                                </label>
-                                <label class="tm-radio-row">
-                                    <input type="radio" name="tm-date-filter" value="1y">
-                                    <span>Last 1 Year</span>
-                                </label>
-                                <label class="tm-radio-row">
-                                    <input type="radio" name="tm-date-filter" value="custom">
-                                    <span>Custom Range</span>
-                                </label>
-                            </div>
-                            <div class="tm-date-range">
-                                <input type="date" id="tm-date-from" aria-label="From date">
-                                <span>-</span>
-                                <input type="date" id="tm-date-to" aria-label="To date">
-                            </div>
-                        </div>
-
-                        <button type="button" class="tm-apply-filters" id="tm-apply-filters">Apply Filters</button>
-                        </div>
-                    </aside>
-
-                    <main class="tm-results-main">
-                        <div class="tm-results-toolbar">
-                            <div>
-                                <h4 id="tm-results-title">Search Results</h4>
-                                <p id="tm-results-summary">Showing 0 results</p>
-                            </div>
-                            <label class="tm-sort-control">
-                                <span>Sort by</span>
-                                <select id="tm-sort-select">
-                                    <option value="relevance">Relevance</option>
-                                    <option value="newest">Newest</option>
-                                    <option value="oldest">Oldest</option>
-                                    <option value="status">Status</option>
-                                    <option value="class">Class</option>
-                                </select>
-                            </label>
-                        </div>
-
-                        <div class="tm-stat-row">
-                            <div class="tm-stat-card tm-stat-blue">
-                                <span>Total Results</span>
-                                <strong id="tm-stat-total">0</strong>
-                                <i class="bi bi-stack"></i>
-                            </div>
-                            <div class="tm-stat-card tm-stat-green">
-                                <span>Registered</span>
-                                <strong id="tm-stat-registered">0</strong>
-                                <i class="bi bi-shield-check"></i>
-                            </div>
-                            <div class="tm-stat-card tm-stat-purple">
-                                <span>Classes</span>
-                                <strong id="tm-stat-classes">0</strong>
-                                <i class="bi bi-grid"></i>
-                            </div>
-                            <div class="tm-stat-card tm-stat-orange">
-                                <span>Last Updated</span>
-                                <strong id="tm-stat-updated">-</strong>
-                                <i class="bi bi-calendar-event"></i>
-                            </div>
-                        </div>
-
-                        <div class="tm-loading" id="tm-loading" hidden>
-                            <div class="spinner-border text-success" role="status"></div>
-                            <span>Searching trademarks...</span>
-                        </div>
-
-                        <div class="tm-empty-state" id="tm-empty-state" hidden>
-                            <i class="bi bi-search"></i>
-                            <h5>No matching trademarks found</h5>
-                            <p>Try a broader keyword or clear your filters.</p>
-                        </div>
-
-                        <div class="tm-card-list" id="tm-card-list"></div>
-
-                        <div class="tm-pagination-bar">
-                            <label class="tm-rows-control">
-                                <span>Rows per page</span>
-                                <select id="tm-rows-select">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                </select>
-                            </label>
-                            <div class="tm-pager">
-                                <button type="button" id="tm-prev-page" aria-label="Previous page">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <span id="tm-page-indicator">1</span>
-                                <button type="button" id="tm-next-page" aria-label="Next page">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-            </div>
             @endif
+
         </div>
     </section>
 
@@ -1440,9 +1467,14 @@
                             <span>Searched trademark</span>
                             <strong id="tm-probability-keyword">—</strong>
                         </div>
-                        <button type="button" id="tm-probability-rerun" class="btn btn-outline-success">
-                            Re-run analysis
-                        </button>
+                        <div class="tm-probability-actions">
+                            <button type="button" id="tm-probability-download" class="btn btn-success" disabled>
+                                <i class="bi bi-download"></i> Download Report
+                            </button>
+                            <button type="button" id="tm-probability-rerun" class="btn btn-outline-success">
+                                Re-run analysis
+                            </button>
+                        </div>
                     </div>
 
                     <div class="tm-probability-loading" id="tm-probability-loading" hidden>
@@ -1464,10 +1496,6 @@
                             <div class="tm-probability-level">
                                 <span>Risk level</span>
                                 <strong id="tm-risk-level">—</strong>
-                            </div>
-                            <div class="tm-probability-confidence">
-                                <span>Confidence</span>
-                                <strong id="tm-confidence-score">—</strong>
                             </div>
                         </div>
                         <section class="tm-ai-summary-card">
@@ -1603,7 +1631,7 @@
     <section class="benefits-section" id="why-us">
         <div class="container">
             <div class="section-header">
-                <h2>Why Choose Legal Bruz (LLP)?</h2>
+                <h2>Why Choose Legal Bruz LLP?</h2>
                 <p>We make trademark registration simple, affordable, and guaranteed</p>
             </div>
 
@@ -1649,8 +1677,10 @@
             $trademarkPricingCoupon = auth()->check()
                 ? \App\Models\DiscountCoupon::autoApplyForPayment('trademark_filing', auth()->id())
                 : \App\Models\DiscountCoupon::autoApplyForPublicService('trademark_filing');
-            $individualOriginalPrice = 7000;
-            $companyOriginalPrice = 9000;
+            $trademarkPricingPlans = $trademarkPricingPlans ?? \App\Models\TrademarkPricing::activePlans();
+            $trademarkPricingDefaults = \App\Models\TrademarkPricing::defaults();
+            $individualOriginalPrice = (float) ($trademarkPricingPlans['individual']['amount'] ?? $trademarkPricingDefaults['individual']['amount']);
+            $companyOriginalPrice = (float) ($trademarkPricingPlans['company']['amount'] ?? $trademarkPricingDefaults['company']['amount']);
             $individualDiscountedPrice = $trademarkPricingCoupon
                 ? $trademarkPricingCoupon->discountedAmountFor($individualOriginalPrice)
                 : $individualOriginalPrice;
@@ -1943,7 +1973,7 @@
                             <span class="pricing-new-price">₹{{ number_format($individualDiscountedPrice, 0) }}</span>
                         </div>
                     @else
-                        <div class="pricing-amount">₹7,000</div>
+                        <div class="pricing-amount">₹{{ number_format($individualOriginalPrice, 0) }}</div>
                     @endif
                     <!-- <p class="pricing-period">50% Advance • +18% GST</p>/ -->
                     <ul class="pricing-features">
@@ -1980,7 +2010,7 @@
                             <span class="pricing-new-price">₹{{ number_format($companyDiscountedPrice, 0) }}</span>
                         </div>
                     @else
-                        <div class="pricing-amount">₹9,000</div>
+                        <div class="pricing-amount">₹{{ number_format($companyOriginalPrice, 0) }}</div>
                     @endif
                     <!-- <p class="pricing-period">50% Advance • +18% GST</p> -->
                     <ul class="pricing-features">
@@ -2009,7 +2039,7 @@
                         <li>Custom Solutions</li>
                         <li>Premium Support</li>
                     </ul>
-                    <a href="#" class="pricing-btn" style="background: var(--slate);">Contact Us</a>
+                    <a href="{{ route('contact') }}" class="pricing-btn" style="background: var(--slate);">Contact Us</a>
                 </div>
             </div>
         </div>
@@ -2089,7 +2119,7 @@
                             Sign Up Free
                         </a>
                     @endauth
-                    <a href="#" class="cta-btn cta-btn-secondary">
+                    <a href="{{ route('contact') }}" class="cta-btn cta-btn-secondary">
                         Schedule a Call
                     </a>
                 </div>
@@ -2103,24 +2133,18 @@
             <h1 style="margin-bottom:50px;margin-left:auto;margin-right:auto;padding:5px; color:#fff; ">
                 <span
                     style="border:2px solid #fff;padding-left:20px;padding-right:20px;padding-top:5px;padding-bottom:5px;">Legal
-                    Bruz (LLP)</span>
+                    Bruz LLP</span>
             </h1>
             <div class="footer-content">
                 <div class="footer-section">
                     <p>India's fastest IPR platform. Trademark, Copyright & Patent registration made simple.</p>
                     <div class="social-links">
-                        <a href="#" class="social-icon" title="Facebook">
-                            <i class="bi bi-facebook"></i>
-                        </a>
-                        <a href="#" class="social-icon" title="Twitter">
-                            <i class="bi bi-twitter"></i>
-                        </a>
-                        <a href="#" class="social-icon" title="LinkedIn">
-                            <i class="bi bi-linkedin"></i>
-                        </a>
-                        <a href="#" class="social-icon" title="Instagram">
-                            <i class="bi bi-instagram"></i>
-                        </a>
+                        @foreach (config('social_links') as $social)
+                            <a href="{{ $social['url'] }}" class="social-icon" target="_blank" rel="noopener noreferrer"
+                                title="{{ $social['label'] }}" aria-label="Legal Bruz on {{ $social['label'] }}">
+                                <i class="bi {{ $social['icon'] }}" aria-hidden="true"></i>
+                            </a>
+                        @endforeach
                     </div>
                 </div>
 
@@ -2130,19 +2154,20 @@
                         <li><a href="#services">Services</a></li>
                         <li><a href="#pricing">Pricing</a></li>
                         <li><a href="#testimonials">Reviews</a></li>
-                        <li><a href="#">Blog</a></li>
-                        <li><a href="#">FAQ</a></li>
+                        <li><a href="{{ route('blog.index') }}">Blog</a></li>
+                        <li><a href="{{ route('faq') }}">FAQ</a></li>
                     </ul>
                 </div>
 
                 <div class="footer-section">
                     <h6>Company</h6>
                     <ul>
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms & Conditions</a></li>
+                        <li><a href="{{ route('about') }}">About Us</a></li>
+                        <li><a href="{{ route('contact') }}">Contact</a></li>
+                        <li><a href="{{ route('careers.index') }}">Careers</a></li>
+                        <li><a href="{{ route('privacy') }}">Privacy Policy</a></li>
+                        <li><a href="{{ route('refund') }}">Refund Policy</a></li>
+                        <li><a href="{{ route('terms') }}">Terms & Conditions</a></li>
                     </ul>
                 </div>
 
@@ -2150,22 +2175,32 @@
                     <h6>Get In Touch</h6>
                     <p>
                         <strong>Email:</strong><br>
-                        <a href="mailto:support@legalbruz.com">support@legalbruz.com</a>
+                        <a href="mailto:info@legalbruz.com">info@legalbruz.com</a>
                     </p>
                     <p style="margin-top: 15px;">
-                        <strong>Phone:</strong><br>
-                        <a href="tel:+919876543210">+91 9876 543 210</a>
-                    </p>
-                    <p style="margin-top: 15px;">
-                        <strong>Office:</strong><br>
+                        <strong>Ambala Office:</strong><br>
                         34 Krishna Nagar, Ambala Cantt,<br>
-                        Haryana 133001, India
+                        Haryana -133001
+                    </p>
+                    <p style="margin-top: 15px;">
+                        <strong>Ambala District Court Office:</strong><br>
+                        Top Floor Chamber no.98<br>
+                        Ambala District court, Haryana
+                    </p>
+                    <p style="margin-top: 15px;">
+                        <strong>London Office:</strong><br>
+                        506-508 woodfield court, Honeypot lane,<br>
+                        stanmore- HA7 1JR
+                    </p>
+                    <p style="margin-top: 15px;">
+                        <strong>Business Hours:</strong><br>
+                        Mon to Friday - 10AM to 5PM
                     </p>
                 </div>
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2024 Legal Bruz (LLP). All rights reserved.</p>
+                <p>&copy; {{ now()->year }} Legal Bruz (LLP). All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -2181,6 +2216,7 @@
             searchSucceeded: false,
             searchLoading: false,
             analysisLoading: false,
+            currentAnalysis: null,
             savedSearches: JSON.parse(localStorage.getItem('legalbruzSavedTrademarkSearches') || '[]'),
             filters: {
                 statuses: new Set(['All Status']),
@@ -2204,14 +2240,15 @@
                 'tm-entry-form', 'tm-search-keyword', 'tm-search-submit', 'tm-search-reset', 'tm-search-note',
                 'tm-results-shell', 'tm-results-keyword', 'tm-clear-inline', 'tm-strip-submit',
                 'tm-ai-probability', 'tm-probability-modal',
-                'tm-probability-rerun', 'tm-probability-keyword', 'tm-probability-loading',
+                'tm-probability-rerun', 'tm-probability-download', 'tm-probability-keyword', 'tm-probability-loading',
                 'tm-probability-error', 'tm-probability-content', 'tm-registration-chance',
                 'tm-conflict-risk', 'tm-risk-level', 'tm-count-word', 'tm-count-device',
                 'tm-count-similar', 'tm-count-class', 'tm-probability-reasons',
                 'tm-probability-warnings', 'tm-warnings-section', 'tm-probability-disclaimer',
                 'tm-ai-summary', 'tm-probability-details', 'tm-probability-overview-card',
-                'tm-confidence-score', 'tm-analysis-quality',
+                'tm-analysis-quality',
                 'tm-refine-panel', 'tm-refine-head', 'tm-sheet-grab', 'tm-filter-sheet-content',
+                'tm-mobile-filter-trigger',
                 'tm-mobile-filter-backdrop', 'tm-mobile-panel-close',
                 'tm-save-search', 'tm-clear-filters', 'tm-status-options', 'tm-class-search',
                 'tm-class-options', 'tm-class-show-more', 'tm-type-options', 'tm-date-from',
@@ -2237,6 +2274,8 @@
             tmEls['tm-strip-submit']?.addEventListener('click', () => runTrademarkSearch(tmEls['tm-results-keyword'].value));
             tmEls['tm-ai-probability']?.addEventListener('click', openTrademarkProbability);
             tmEls['tm-probability-rerun']?.addEventListener('click', analyzeTrademarkProbability);
+            tmEls['tm-probability-download']?.addEventListener('click', downloadTrademarkProbabilityReport);
+            tmEls['tm-mobile-filter-trigger']?.addEventListener('click', openTrademarkFilterSheet);
             tmEls['tm-search-reset']?.addEventListener('click', clearTrademarkSearch);
             tmEls['tm-clear-inline']?.addEventListener('click', () => {
                 tmEls['tm-results-keyword'].value = '';
@@ -2473,6 +2512,7 @@
             tmSearchState.filtered = [];
             tmSearchState.searchCompleted = false;
             tmSearchState.searchSucceeded = false;
+            tmSearchState.currentAnalysis = null;
             tmSearchState.page = 1;
             tmSearchState.classExpanded = false;
             updateAiProbabilityButton();
@@ -2665,18 +2705,22 @@
             tmEls['tm-probability-content'].hidden = isLoading;
             tmEls['tm-ai-probability'].disabled = isLoading;
             tmEls['tm-probability-rerun'].disabled = isLoading;
+            if (tmEls['tm-probability-download']) tmEls['tm-probability-download'].disabled = isLoading || !tmSearchState.currentAnalysis;
             tmEls['tm-ai-probability'].querySelector('span').textContent = isLoading ? 'Analyzing...' : 'AI Probability';
             if (!isLoading) updateAiProbabilityButton();
         }
 
         function showTrademarkProbabilityError(message) {
+            tmSearchState.currentAnalysis = null;
             tmEls['tm-probability-content'].hidden = true;
             tmEls['tm-probability-error'].textContent = message;
             tmEls['tm-probability-error'].hidden = false;
+            if (tmEls['tm-probability-download']) tmEls['tm-probability-download'].disabled = true;
         }
 
         function renderTrademarkProbability(analysis) {
             const insights = analysis.ai_insights;
+            tmSearchState.currentAnalysis = analysis;
             tmEls['tm-probability-error'].hidden = true;
             tmEls['tm-probability-content'].hidden = false;
             tmEls['tm-probability-keyword'].textContent = analysis.keyword;
@@ -2684,7 +2728,6 @@
             tmEls['tm-conflict-risk'].textContent = `${analysis.conflict_risk}%`;
             tmEls['tm-risk-level'].textContent = analysis.risk_level;
             tmEls['tm-risk-level'].className = `is-${analysis.risk_level.toLowerCase().replace(/\s+/g, '-')}`;
-            tmEls['tm-confidence-score'].textContent = `${analysis.confidence_score}%`;
             tmEls['tm-analysis-quality'].textContent = analysis.analysis_quality.replace(/^./, character => character.toUpperCase());
             tmEls['tm-count-word'].textContent = analysis.exact_active_word_marks;
             tmEls['tm-count-device'].textContent = analysis.exact_active_device_marks;
@@ -2695,6 +2738,7 @@
             renderTrademarkInsightWarnings(insights.warnings);
             tmEls['tm-probability-disclaimer'].textContent = analysis.disclaimer;
             renderTrademarkProbabilityCharts(analysis);
+            if (tmEls['tm-probability-download']) tmEls['tm-probability-download'].disabled = false;
         }
 
         function renderTrademarkInsightReasons(reasons) {
@@ -2759,6 +2803,143 @@
                 data: { labels: factors.map(factor => factor.label), datasets: [{ label: 'Factor score', data: factors.map(factor => factor.score), backgroundColor: '#335f8a', borderRadius: 7 }] },
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } },
             });
+        }
+
+        async function downloadTrademarkProbabilityReport() {
+            const analysis = tmSearchState.currentAnalysis;
+
+            if (!analysis) {
+                showTrademarkProbabilityError('Run the trademark probability analysis before downloading the report.');
+                return;
+            }
+
+            const button = tmEls['tm-probability-download'];
+            const originalLabel = button?.innerHTML;
+
+            try {
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Preparing PDF...';
+                }
+
+                const response = await fetch(`{{ route('trademark.probability-report', [], false) }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/pdf',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({
+                        keyword: analysis.keyword || tmSearchState.keyword,
+                        analysis,
+                        records: tmSearchState.results.slice(0, 25).map(item => ({
+                            application_id: item.applicationId || item.id || null,
+                            trademark_name: item.name,
+                            status: item.status,
+                            class: item.class === 'Unclassified' ? null : item.class,
+                            type: item.type,
+                            proprietor: item.proprietor === 'Not available' ? null : item.proprietor,
+                        })),
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to generate the PDF report right now.');
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${slugifyFilename(analysis.keyword || tmSearchState.keyword || 'trademark')}-probability-report.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                showTrademarkProbabilityError(error.message || 'Unable to generate the PDF report right now.');
+            } finally {
+                if (button) {
+                    button.innerHTML = originalLabel || '<i class="bi bi-download"></i> Download Report';
+                    button.disabled = !tmSearchState.currentAnalysis;
+                }
+            }
+        }
+
+        function buildTrademarkProbabilityReportHtml(analysis) {
+            const insights = analysis.ai_insights || {};
+            const reasons = Array.isArray(insights.reasons) ? insights.reasons : [];
+            const warnings = Array.isArray(insights.warnings) ? insights.warnings : [];
+            const factors = Array.isArray(analysis.factors) ? analysis.factors : [];
+            const records = tmSearchState.results.slice(0, 25);
+            const generatedAt = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+            const overviewChart = document.getElementById('tm-probability-doughnut')?.toDataURL('image/png') || '';
+            const factorsChart = document.getElementById('tm-probability-factors')?.toDataURL('image/png') || '';
+
+            return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(analysis.keyword)} - Trademark Probability Report</title>
+<style>
+body{margin:0;background:#f4f8fb;color:#1d3557;font-family:Inter,Arial,sans-serif;line-height:1.55}
+.page{max-width:1040px;margin:0 auto;padding:34px 24px 48px}
+.hero,.card{background:#fff;border:1px solid #dfe8f1;border-radius:18px;box-shadow:0 16px 42px rgba(29,53,87,.08)}
+.hero{padding:34px;margin-bottom:22px}
+.kicker{color:#6754e8;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+h1{margin:8px 0 6px;font-size:34px;line-height:1.1}
+h2{margin:0 0 16px;font-size:20px}.muted{color:#687792}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0}
+.metric{padding:20px;border:1px solid #e3ebf3;border-radius:14px;background:#fbfdff}.metric span{display:block;color:#71809a;font-weight:800}.metric strong{display:block;margin-top:8px;font-size:34px}.ok{color:#078d80}.risk{color:#dc454e}
+.card{padding:24px;margin-top:18px}.summary{background:#f8f7ff;border-color:#dedafe}.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px}.chart img{max-width:100%;height:auto}
+ul{padding-left:22px}li{margin:9px 0}.badge{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;background:#eef2f6;color:#526076;font-size:11px;font-weight:900;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid #e5edf4;text-align:left;vertical-align:top}th{color:#526076;background:#f8fafc}
+.actions{margin-top:22px}.print{display:inline-block;padding:11px 16px;border-radius:10px;background:#078d80;color:#fff;text-decoration:none;font-weight:900}
+@media print{body{background:#fff}.page{max-width:none;padding:0}.actions{display:none}.hero,.card{box-shadow:none;break-inside:avoid}}@media(max-width:760px){.grid,.charts{grid-template-columns:1fr}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<main class="page">
+<section class="hero">
+<div class="kicker">Legal Bruz LLP · Trademark Registration Probability</div>
+<h1>${escapeHtml(analysis.keyword)}</h1>
+<p class="muted">Generated on ${escapeHtml(generatedAt)} from ${tmSearchState.results.length} searched trademark record${tmSearchState.results.length === 1 ? '' : 's'}.</p>
+<div class="grid">
+<div class="metric"><span>Registration Chance</span><strong class="ok">${Number(analysis.registration_probability) || 0}%</strong></div>
+<div class="metric"><span>Conflict Risk</span><strong class="risk">${Number(analysis.conflict_risk) || 0}%</strong></div>
+<div class="metric"><span>Risk Level</span><strong>${escapeHtml(analysis.risk_level || '—')}</strong></div>
+</div>
+<div class="actions"><a class="print" href="#" onclick="window.print();return false;">Print / Save as PDF</a></div>
+</section>
+<section class="card summary"><h2>AI Analysis Summary</h2><p>${escapeHtml(insights.summary || '')}</p></section>
+<section class="card charts"><div class="chart"><h2>Probability Overview</h2>${overviewChart ? `<img src="${overviewChart}" alt="Probability overview chart">` : ''}</div><div class="chart"><h2>Risk Factors</h2>${factorsChart ? `<img src="${factorsChart}" alt="Risk factors chart">` : factorRows(factors)}</div></section>
+<section class="card"><h2>Conflict Counts</h2><div class="grid"><div class="metric"><span>Exact active Word marks</span><strong>${Number(analysis.exact_active_word_marks) || 0}</strong></div><div class="metric"><span>Exact active Device marks</span><strong>${Number(analysis.exact_active_device_marks) || 0}</strong></div><div class="metric"><span>Similar active marks</span><strong>${Number(analysis.similar_active_marks) || 0}</strong></div></div></section>
+<section class="card"><h2>Reasons</h2>${listRows(reasons, reason => `<strong>${escapeHtml(reason.title || 'Reason')}</strong><span class="badge">${escapeHtml(reason.impact || 'info')}</span><p>${escapeHtml(reason.detail || '')}</p>`)}</section>
+${warnings.length ? `<section class="card"><h2>Warnings</h2>${listRows(warnings, warning => `<strong>${escapeHtml(warning.title || 'Warning')}</strong><p>${escapeHtml(warning.detail || '')}</p><p><strong>Recommended action:</strong> ${escapeHtml(warning.action || '')}</p>`)}</section>` : ''}
+<section class="card"><h2>Top Search Records Used</h2>${recordTable(records)}</section>
+<section class="card"><h2>Disclaimer</h2><p>${escapeHtml(analysis.disclaimer || 'This report is an informational search-data estimate and is not legal advice or a guarantee of registry outcome.')}</p></section>
+</main>
+</body>
+</html>`;
+        }
+
+        function factorRows(factors) {
+            if (!factors.length) return '<p class="muted">No factor data available.</p>';
+            return `<ul>${factors.map(factor => `<li><strong>${escapeHtml(factor.label || '')}:</strong> ${factor.score === null ? 'Not applicable' : `${Number(factor.score)}%`}</li>`).join('')}</ul>`;
+        }
+
+        function listRows(items, renderer) {
+            if (!items.length) return '<p class="muted">No items reported.</p>';
+            return `<ul>${items.map(item => `<li>${renderer(item)}</li>`).join('')}</ul>`;
+        }
+
+        function recordTable(records) {
+            if (!records.length) return '<p class="muted">No trademark records were available.</p>';
+            return `<table><thead><tr><th>Application ID</th><th>Trademark</th><th>Status</th><th>Class</th><th>Type</th><th>Proprietor</th></tr></thead><tbody>${records.map(record => `<tr><td>${escapeHtml(record.applicationId || record.id || '')}</td><td>${escapeHtml(record.name || '')}</td><td>${escapeHtml(record.status || '')}</td><td>${escapeHtml(record.class || '')}</td><td>${escapeHtml(record.type || '')}</td><td>${escapeHtml(record.proprietor || '')}</td></tr>`).join('')}</tbody></table>`;
+        }
+
+        function slugifyFilename(value) {
+            return String(value || 'trademark').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'trademark';
         }
 
         function renderTrademarkFilters() {
@@ -3162,6 +3343,7 @@
 
         initTrademarkSearch();
     </script>
+    @include('partials.disclaimer-consent')
 </body>
 
 </html>

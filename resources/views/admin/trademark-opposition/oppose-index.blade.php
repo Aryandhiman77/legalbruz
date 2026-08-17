@@ -12,18 +12,23 @@
                 <p class="text-muted mb-0">Flow B: Oppose a Trademark</p>
             </div>
             <form class="admin-filter" method="GET">
+                <input class="admin-input" name="search" value="{{ request('search') }}"
+                    placeholder="Search case, client, or trademark">
                 <select class="admin-input" name="status">
                     <option value="">All statuses</option>
                     @foreach ($statuses as $status)
-                        <option value="{{ $status }}" @selected($selectedStatus === $status)>{{ $status }}</option>
+                        <x-admin-status-option :value="$status" :selected="$selectedStatus === $status" />
                     @endforeach
                 </select>
                 <button class="admin-btn" type="submit">Filter</button>
+                @if (request()->hasAny(['search', 'status']))
+                    <a class="btn btn-outline-secondary btn-sm" href="{{ route('admin.trademark-opposition.oppose.index') }}">Clear</a>
+                @endif
             </form>
         </div>
 
         <div class="admin-card table-responsive">
-            <table class="table admin-table align-middle">
+            <table class="table admin-table align-middle admin-list-table">
                 <thead>
                     <tr>
                         <th>Case</th>
@@ -32,6 +37,7 @@
                         <th>Opposed Mark</th>
                         <th>Status</th>
                         <th>Payment</th>
+                        <th>Updated</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -42,12 +48,13 @@
                             <td>{{ $case->user_business_name }}<br><small>{{ $case->email }}</small></td>
                             <td>{{ $case->trademark_you_own }}<br><small>Class {{ $case->trademark_class }}</small></td>
                             <td>{{ $case->trademark_to_oppose }}<br><small>{{ $case->opposed_applicant_name ?: 'Applicant not provided' }}</small></td>
-                            <td><span class="admin-status">{{ $case->current_admin_status }}</span></td>
-                            <td>{{ ucfirst($case->payment_status) }}</td>
+                            <td><x-admin-status :status="$case->current_admin_status" /></td>
+                            <td><x-admin-status :status="$case->payment_status" /></td>
+                            <td><x-admin-date-time :value="$case->updated_at" /></td>
                             <td><a class="admin-btn" href="{{ route('admin.trademark-opposition.oppose.show', $case) }}">Open</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-muted py-4">No trademark opposition filing cases found.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">No trademark opposition filing cases found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -126,6 +126,51 @@
             text-decoration: none;
         }
 
+        .recovery-case-table {
+            min-width: 1180px !important;
+        }
+
+        .recovery-case-table .case-column { width: 145px; }
+        .recovery-case-table .applicant-column { width: 235px; }
+        .recovery-case-table .trademark-column { width: 155px; }
+        .recovery-case-table .issues-column { width: 270px; }
+        .recovery-case-table .status-column { width: 165px; }
+        .recovery-case-table .audit-column { width: 85px; }
+        .recovery-case-table .updated-column { width: 105px; }
+        .recovery-case-table .action-column { width: 95px; text-align: right; }
+
+        .recovery-case-number,
+        .recovery-applicant,
+        .recovery-trademark {
+            display: block;
+            overflow-wrap: anywhere;
+        }
+
+        .recovery-case-table .recovery-email {
+            display: block;
+            margin-top: 3px;
+            overflow-wrap: anywhere;
+        }
+
+        .recovery-case-table .recovery-issues {
+            display: -webkit-box;
+            overflow: hidden;
+            color: #526176;
+            line-height: 1.5;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+        }
+
+        .recovery-case-table .recovery-status-badge {
+            display: inline-flex;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .recovery-case-table .recovery-date {
+            white-space: nowrap;
+        }
+
         @media (max-width: 991.98px) {
             .recovery-admin-table {
                 display: none;
@@ -181,11 +226,42 @@
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
 
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <form method="GET" class="d-flex gap-2 flex-wrap">
+                    <input name="search" class="form-control form-control-sm flex-grow-1"
+                        style="min-width:220px" value="{{ request('search') }}"
+                        placeholder="Search case, applicant, email, application, or trademark">
+                    <select name="status" class="form-select form-select-sm" style="max-width:240px">
+                        <option value="">All statuses</option>
+                        @foreach ($statuses as $value => $label)
+                            <x-admin-status-option :value="$value" :label="$label"
+                                :selected="request('status') === $value" />
+                        @endforeach
+                    </select>
+                    <button class="btn btn-primary btn-sm" type="submit">Search &amp; filter</button>
+                    @if (request()->hasAny(['search', 'status']))
+                        <a href="{{ route('admin.stuck-trademark.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    @endif
+                </form>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 @if ($cases->count())
                     <div class="table-responsive recovery-admin-table">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 admin-list-table recovery-case-table">
+                            <colgroup>
+                                <col class="case-column">
+                                <col class="applicant-column">
+                                <col class="trademark-column">
+                                <col class="issues-column">
+                                <col class="status-column">
+                                <col class="audit-column">
+                                <col class="updated-column">
+                                <col class="action-column">
+                            </colgroup>
                             <thead class="table-light">
                                 <tr>
                                     <th>Case</th>
@@ -202,19 +278,23 @@
                                 @foreach ($cases as $case)
                                     <tr>
                                         <td>
-                                            <strong>{{ $case->case_number }}</strong><br>
+                                            <strong class="recovery-case-number">{{ $case->case_number }}</strong>
                                             <small class="text-muted">{{ $case->application_number ?: 'No application no.' }}</small>
                                         </td>
                                         <td>
-                                            {{ $case->applicant_name }}<br>
-                                            <small class="text-muted">{{ $case->email }}</small>
+                                            <strong class="recovery-applicant">{{ $case->applicant_name }}</strong>
+                                            <small class="text-muted recovery-email">{{ $case->email }}</small>
                                         </td>
-                                        <td>{{ $case->trademark_name }}</td>
-                                        <td><small>{{ $case->issue_summary ?: 'Not classified' }}</small></td>
-                                        <td><span class="badge bg-primary">{{ $case->status_label }}</span></td>
-                                        <td>{{ ucfirst($case->audit_payment_status) }}</td>
-                                        <td>{{ $case->updated_at->format('d M Y') }}</td>
+                                        <td><span class="recovery-trademark">{{ $case->trademark_name }}</span></td>
                                         <td>
+                                            <span class="recovery-issues" title="{{ $case->issue_summary ?: 'Not classified' }}">
+                                                {{ $case->issue_summary ?: 'Not classified' }}
+                                            </span>
+                                        </td>
+                                        <td><x-admin-status :status="$case->status_label" class="recovery-status-badge" /></td>
+                                        <td><x-admin-status :status="$case->audit_payment_status" /></td>
+                                        <td><span class="recovery-date">{{ $case->updated_at->timezone('Asia/Kolkata')->format('d M Y') }}</span></td>
+                                        <td class="text-end">
                                             <a href="{{ route('admin.stuck-trademark.show', $case) }}" class="btn btn-sm btn-primary">Manage</a>
                                         </td>
                                     </tr>
@@ -230,7 +310,7 @@
                                         <strong>{{ $case->trademark_name }}</strong>
                                         <small class="text-muted">{{ $case->case_number }} · {{ $case->application_number ?: 'No application no.' }}</small>
                                     </div>
-                                    <span class="recovery-admin-status">{{ $case->status_label }}</span>
+                                    <x-admin-status :status="$case->status_label" class="recovery-admin-status" />
                                 </div>
                                 <div class="recovery-admin-meta">
                                     <div class="recovery-admin-meta-item">
@@ -252,7 +332,7 @@
                                     </div>
                                     <div class="recovery-admin-meta-item">
                                         <span>Updated</span>
-                                        <strong>{{ $case->updated_at->format('d M Y') }}</strong>
+                                        <strong>{{ $case->updated_at->timezone('Asia/Kolkata')->format('d M Y') }}</strong>
                                     </div>
                                 </div>
                                 <div class="recovery-admin-actions">
