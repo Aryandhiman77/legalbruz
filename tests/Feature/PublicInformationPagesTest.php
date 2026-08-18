@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Admin;
+use App\Models\CmsPage;
 use App\Models\ContactMessage;
 use App\Models\Faq;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +34,31 @@ class PublicInformationPagesTest extends TestCase
             ->assertSee('506-508 woodfield court, Honeypot lane, stanmore- HA7 1JR')
             ->assertSee('Mon to Friday - 10AM to 5PM');
         $this->get(route('faq'))->assertOk()->assertSee('Frequently Asked Questions');
+    }
+
+    public function test_legal_pages_render_content_saved_in_the_admin_cms(): void
+    {
+        $pages = [
+            CmsPage::TERMS => ['route' => 'terms', 'title' => 'Updated Terms', 'content' => '<p>Terms managed by admin.</p>'],
+            CmsPage::PRIVACY => ['route' => 'privacy', 'title' => 'Updated Privacy', 'content' => '<p>Privacy managed by admin.</p>'],
+            CmsPage::REFUND => ['route' => 'refund', 'title' => 'Updated Refunds', 'content' => '<p>Refunds managed by admin.</p>'],
+        ];
+
+        foreach ($pages as $key => $page) {
+            CmsPage::query()->updateOrCreate(
+                ['key' => $key],
+                [
+                    'title' => $page['title'],
+                    'content' => $page['content'],
+                    'is_active' => true,
+                ],
+            );
+
+            $this->get(route($page['route']))
+                ->assertOk()
+                ->assertSee($page['title'])
+                ->assertSee($page['content'], false);
+        }
     }
 
     public function test_official_social_profiles_are_linked_across_public_pages(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContactMessage;
+use App\Models\CmsPage;
 use App\Models\Faq;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -20,17 +21,24 @@ class PublicPageController extends Controller
 
     public function terms(): View
     {
-        return view('pages.terms');
+        return $this->legalPage('pages.terms', CmsPage::TERMS);
     }
 
     public function privacy(): View
     {
-        return view('pages.privacy');
+        return $this->legalPage('pages.privacy', CmsPage::PRIVACY);
     }
 
     public function refund(): View
     {
-        return view('pages.refund');
+        return $this->legalPage('pages.refund', CmsPage::REFUND);
+    }
+
+    private function legalPage(string $view, string $key): View
+    {
+        return view($view, [
+            'legalPage' => CmsPage::findByKey($key),
+        ]);
     }
 
     public function faq(Request $request): View|JsonResponse
