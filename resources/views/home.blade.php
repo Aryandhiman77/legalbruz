@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Legal Bruz (LLP) - IPR & Trademark Registration | India's Fastest Platform</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo4.png') }}">
     <meta name="description" content="Protect your brand with Legal Bruz. Search trademarks, file applications, respond to objections, and manage intellectual property matters online.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="{{ route('landing') }}">

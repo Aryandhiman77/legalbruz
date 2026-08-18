@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'Legal Bruz (LLP)') . ' - IPR Registration')</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo4.png') }}">
     <meta name="description" content="@yield('meta_description', 'Legal Bruz simplifies trademark registration, intellectual property protection, and legal support for businesses across India.')">
     <meta name="robots" content="@yield('meta_robots', request()->is('admin*', 'login', 'register', 'dashboard*', 'home') ? 'noindex, nofollow' : 'index, follow, max-image-preview:large')">
     <link rel="canonical" href="@yield('canonical_url', url()->current())">
