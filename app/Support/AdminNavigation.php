@@ -12,19 +12,17 @@ final class AdminNavigation
      */
     public static function groups(): array
     {
-        $navigation = config('admin_navigation');
-
-        if (is_array($navigation) && $navigation !== []) {
-            return $navigation;
-        }
-
         $configurationFile = config_path('admin_navigation.php');
 
-        if (! is_file($configurationFile)) {
-            return [];
+        if (is_file($configurationFile)) {
+            $navigation = require $configurationFile;
+
+            if (is_array($navigation) && $navigation !== []) {
+                return $navigation;
+            }
         }
 
-        $navigation = require $configurationFile;
+        $navigation = config('admin_navigation');
 
         return is_array($navigation) ? $navigation : [];
     }

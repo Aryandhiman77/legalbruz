@@ -28,6 +28,14 @@
                     <p>Unique visitors who opened a service</p>
                 </div>
             </article>
+            <a class="admin-visitor-card admin-review-card" href="{{ route('admin.reviews.index') }}">
+                <span class="admin-visitor-icon reviews"><i class="bi bi-star"></i></span>
+                <div>
+                    <small>Published reviews</small>
+                    <strong>{{ number_format($publishedReviewsCount) }}</strong>
+                    <p>{{ number_format($reviewsCount) }} total reviews · Manage reviews <i class="bi bi-arrow-right"></i></p>
+                </div>
+            </a>
         </section>
 
         <section class="admin-service-panel" aria-labelledby="service-visitors-title">
@@ -91,11 +99,14 @@
         .admin-welcome h1 { margin:10px 0 8px;color:#fff;font-size:clamp(1.55rem,2.5vw,2.25rem);letter-spacing:-.035em }
         .admin-welcome p { max-width:700px;margin:0;color:rgba(255,255,255,.76);font-size:.82rem;line-height:1.7 }
         .admin-welcome-mark { display:grid;place-items:center;width:82px;height:82px;border:1px solid rgba(255,255,255,.16);border-radius:22px;background:rgba(255,255,255,.08);font-size:2rem }
-        .admin-visitor-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px }
+        .admin-visitor-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:22px }
         .admin-visitor-card { display:flex;align-items:center;gap:16px;min-height:126px;padding:23px;border:1px solid #dfe7ef;border-radius:15px;background:#fff;box-shadow:0 10px 28px rgba(7,31,72,.055) }
+        .admin-review-card { color:inherit;text-decoration:none;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease }
+        .admin-review-card:hover { color:inherit;border-color:#a8d8d1;box-shadow:0 13px 30px rgba(7,31,72,.09);transform:translateY(-2px) }
         .admin-visitor-icon { display:grid;place-items:center;flex:0 0 52px;height:52px;border-radius:13px;font-size:1.25rem }
         .admin-visitor-icon.website { color:#11796f;background:#e6f7f4 }
         .admin-visitor-icon.service { color:#245b99;background:#eaf1fb }
+        .admin-visitor-icon.reviews { color:#a56a00;background:#fff5d9 }
         .admin-visitor-card small,.admin-visitor-card strong { display:block }
         .admin-visitor-card small { color:#61738b;font-size:.72rem;font-weight:850;text-transform:uppercase;letter-spacing:.06em }
         .admin-visitor-card strong { margin-top:5px;color:#102a4c;font-size:1.65rem;line-height:1 }
@@ -130,6 +141,7 @@
         .admin-quicklink-copy small { margin-top:4px;color:#748196;font-size:.72rem;line-height:1.45 }
         .admin-quicklink-arrow { position:absolute;top:15px;right:15px;color:#9aabba;font-size:.72rem }
         @media(max-width:1100px){.admin-quicklinks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:1100px){.admin-visitor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media(max-width:900px){.admin-welcome-mark{display:none}}
         @media(max-width:650px){.admin-quicklinks-grid,.admin-service-grid{grid-template-columns:1fr}.admin-service-heading{align-items:flex-start;flex-direction:column;gap:6px}}
         @media(max-width:575px){.admin-welcome{min-height:170px;padding:26px 22px}.admin-visitor-grid{grid-template-columns:1fr}.admin-quicklinks-panel{padding:20px}}

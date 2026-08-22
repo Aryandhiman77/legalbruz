@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\StuckTrademarkCase;
 use App\Models\WebsiteVisitor;
 use App\Models\WebsiteServiceVisit;
+use App\Models\CustomerReview;
 use App\Services\DocumentGenerator;
 use App\Services\NotificationService;
 use App\Services\TrademarkWorkflowService;
@@ -54,6 +55,8 @@ class AdminController extends Controller
         $serviceLeads = Schema::hasTable('website_visitors')
             ? WebsiteVisitor::whereNotNull('service_first_visited_at')->count()
             : 0;
+        $reviewsCount = Schema::hasTable('customer_reviews') ? CustomerReview::count() : 0;
+        $publishedReviewsCount = Schema::hasTable('customer_reviews') ? CustomerReview::published()->count() : 0;
         $serviceVisitorCounts = collect(config('visitor_services', []))
             ->map(function (array $service, string $key) {
                 return array_merge($service, [
@@ -74,6 +77,8 @@ class AdminController extends Controller
             'recoveryCases' => $recoveryCases,
             'websiteVisitors' => $websiteVisitors,
             'serviceLeads' => $serviceLeads,
+            'reviewsCount' => $reviewsCount,
+            'publishedReviewsCount' => $publishedReviewsCount,
             'serviceVisitorCounts' => $serviceVisitorCounts,
         ]);
     }

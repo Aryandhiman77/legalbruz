@@ -29,6 +29,7 @@ return [
         'items' => [
             ['label' => 'Blogs', 'description' => 'Publish and manage articles', 'icon' => 'bi-newspaper', 'route' => 'admin.blogs.index', 'active' => ['admin.blogs.*']],
             ['label' => 'FAQs', 'description' => 'Manage frequently asked questions', 'icon' => 'bi-question-circle', 'route' => 'admin.faqs.index', 'active' => ['admin.faqs.*']],
+            ['label' => 'Reviews', 'description' => 'Manage homepage customer reviews', 'icon' => 'bi-star', 'route' => 'admin.reviews.index', 'active' => ['admin.reviews.*']],
             ['label' => 'Job Roles', 'description' => 'Publish and manage open positions', 'icon' => 'bi-briefcase', 'route' => 'admin.career-jobs.index', 'active' => ['admin.career-jobs.*']],
             ['label' => 'Discount Coupons', 'description' => 'Manage promotional discount codes', 'icon' => 'bi-ticket-perforated', 'route' => 'admin.discount-coupons.index', 'active' => ['admin.discount-coupons.*']],
         ],

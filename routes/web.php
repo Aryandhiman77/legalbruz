@@ -29,11 +29,13 @@ use App\Http\Controllers\AdminCareerApplicationController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\AdminBlogController;
 use App\Http\Controllers\AdminCmsPageController;
+use App\Http\Controllers\AdminReviewController;
 use App\Http\Controllers\SeoController;
 
 Route::get('/', function () {
     return view('home', [
         'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+        'customerReviews' => \App\Models\CustomerReview::homepageReviews(),
     ]);
 })->name('landing');
 
@@ -42,6 +44,7 @@ Route::get('/trademark-search', function () {
         'searchPage' => true,
         'keyword' => request()->query('keyword', ''),
         'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+        'customerReviews' => \App\Models\CustomerReview::homepageReviews(),
     ]);
 })->name('trademark.search-page');
 
@@ -308,6 +311,16 @@ Route::middleware(['admin'])->prefix('admin')->group(function () {
             'edit' => 'admin.faqs.edit',
             'update' => 'admin.faqs.update',
             'destroy' => 'admin.faqs.destroy',
+        ]);
+    Route::resource('/reviews', AdminReviewController::class)
+        ->except('show')
+        ->names([
+            'index' => 'admin.reviews.index',
+            'create' => 'admin.reviews.create',
+            'store' => 'admin.reviews.store',
+            'edit' => 'admin.reviews.edit',
+            'update' => 'admin.reviews.update',
+            'destroy' => 'admin.reviews.destroy',
         ]);
     Route::get('/contact-messages', [AdminContactMessageController::class, 'index'])->name('admin.contact-messages.index');
     Route::get('/contact-messages/{contactMessage}', [AdminContactMessageController::class, 'show'])->name('admin.contact-messages.show');

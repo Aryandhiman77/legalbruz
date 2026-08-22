@@ -34,10 +34,13 @@ class AdminNavigationTest extends TestCase
             ->assertSee('All Applications')
             ->assertSee('Oppose Cases')
             ->assertSee('Career Applications')
+            ->assertSee('Published reviews')
+            ->assertSee('Manage reviews')
             ->assertSee('Log out')
             ->assertSee('action="'.route('admin.logout').'"', false)
             ->assertSee(route('admin.blogs.index'), false)
             ->assertSee(route('admin.contact-messages.index'), false)
+            ->assertSee(route('admin.reviews.index'), false)
             ->assertSee(route('admin.discount-coupons.index'), false);
     }
 
@@ -58,12 +61,15 @@ class AdminNavigationTest extends TestCase
 
     public function test_navigation_survives_a_stale_live_configuration_cache(): void
     {
-        Config::set('admin_navigation', null);
+        Config::set('admin_navigation', [
+            ['label' => 'Stale navigation', 'items' => []],
+        ]);
 
         $groups = AdminNavigation::groups();
 
         $this->assertNotEmpty($groups);
         $this->assertSame('Overview', $groups[0]['label']);
+        $this->assertTrue(collect($groups)->pluck('items')->flatten(1)->contains('route', 'admin.reviews.index'));
 
         $admin = $this->createAdmin();
 
@@ -90,6 +96,7 @@ class AdminNavigationTest extends TestCase
             'admin.career-applications.index' => 'new',
             'admin.contact-messages.index' => 'new',
             'admin.faqs.index' => 'published',
+            'admin.reviews.index' => 'published',
             'admin.discount-coupons.index' => 'active',
         ];
 

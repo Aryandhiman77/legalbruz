@@ -2047,6 +2047,7 @@
     </section>
 
     <!-- ============ TESTIMONIALS SECTION ============ -->
+    @if ($customerReviews->isNotEmpty())
     <section class="testimonials-section" id="testimonials">
         <div class="container">
             <div class="section-header">
@@ -2054,54 +2055,41 @@
                 <p>See what our customers say about their experience</p>
             </div>
 
-            <div class="testimonials-grid">
-                <div class="testimonial-card">
-                    <div class="stars">⭐⭐⭐⭐⭐</div>
-                    <p class="testimonial-text">
-                        "Fantastic service! My trademark got filed in just 2 days. The entire process was transparent
-                        and hassle-free. Highly recommended!"
-                    </p>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">RP</div>
-                        <div class="author-info">
-                            <div class="author-name">Rahul Patel</div>
-                            <div class="author-title">Founder, Tech Startup</div>
-                        </div>
+            <div class="testimonials-carousel" data-testimonials-carousel aria-roledescription="carousel" aria-label="Customer reviews">
+                <div class="testimonials-viewport">
+                    <div class="testimonials-track" data-testimonials-track>
+                        @foreach ($customerReviews as $review)
+                            <article class="testimonial-card" data-testimonial-slide>
+                                <div class="stars" aria-label="{{ $review->rating }} out of 5 stars">
+                                    <span aria-hidden="true">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
+                                </div>
+                                <p class="testimonial-text">“{{ $review->review }}”</p>
+                                <div class="testimonial-author">
+                                    <div class="author-avatar" aria-hidden="true">{{ $review->initials }}</div>
+                                    <div class="author-info">
+                                        <div class="author-name">{{ $review->customer_name }}</div>
+                                        <div class="author-title">{{ $review->customer_title }}</div>
+                                    </div>
+                                </div>
+                            </article>
+                        @endforeach
                     </div>
                 </div>
-
-                <div class="testimonial-card">
-                    <div class="stars">⭐⭐⭐⭐⭐</div>
-                    <p class="testimonial-text">
-                        "Excellent support from their team. They guided me through every step and my brand is now
-                        officially registered!"
-                    </p>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">PK</div>
-                        <div class="author-info">
-                            <div class="author-name">Priya Kapoor</div>
-                            <div class="author-title">Fashion Designer</div>
-                        </div>
+                @if ($customerReviews->count() > 1)
+                    <div class="testimonials-controls">
+                        <button type="button" class="testimonial-arrow" data-testimonials-prev aria-label="Previous reviews">
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                        </button>
+                        <div class="testimonials-dots" data-testimonials-dots aria-label="Choose a review page"></div>
+                        <button type="button" class="testimonial-arrow" data-testimonials-next aria-label="Next reviews">
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </button>
                     </div>
-                </div>
-
-                <div class="testimonial-card">
-                    <div class="stars">⭐⭐⭐⭐⭐</div>
-                    <p class="testimonial-text">
-                        "Best decision for my business. Their pricing is transparent and the support is outstanding.
-                        5-star service!"
-                    </p>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">AK</div>
-                        <div class="author-info">
-                            <div class="author-name">Amit Kumar</div>
-                            <div class="author-title">E-commerce Business</div>
-                        </div>
-                    </div>
-                </div>
+                @endif
             </div>
         </div>
     </section>
+    @endif
 
     <!-- ============ CTA SECTION ============ -->
     <section class="cta-section">
@@ -3189,6 +3177,78 @@ ${warnings.length ? `<section class="card"><h2>Warnings</h2>${listRows(warnings,
             element.textContent = value ?? '';
             return element.innerHTML;
         }
+
+        // Responsive customer reviews carousel
+        document.querySelectorAll('[data-testimonials-carousel]').forEach(carousel => {
+            const track = carousel.querySelector('[data-testimonials-track]');
+            const slides = [...carousel.querySelectorAll('[data-testimonial-slide]')];
+            const previousButton = carousel.querySelector('[data-testimonials-prev]');
+            const nextButton = carousel.querySelector('[data-testimonials-next]');
+            const dotsContainer = carousel.querySelector('[data-testimonials-dots]');
+            const controls = carousel.querySelector('.testimonials-controls');
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            let page = 0;
+            let pageCount = 1;
+            let timer = null;
+            let touchStartX = null;
+
+            const perView = () => window.innerWidth < 576 ? 1 : (window.innerWidth < 992 ? 2 : 3);
+
+            const renderDots = () => {
+                if (!dotsContainer) return;
+                dotsContainer.innerHTML = '';
+                for (let index = 0; index < pageCount; index += 1) {
+                    const dot = document.createElement('button');
+                    dot.type = 'button';
+                    dot.className = `testimonial-dot${index === page ? ' is-active' : ''}`;
+                    dot.setAttribute('aria-label', `Show review page ${index + 1}`);
+                    dot.setAttribute('aria-current', index === page ? 'true' : 'false');
+                    dot.addEventListener('click', () => goTo(index));
+                    dotsContainer.appendChild(dot);
+                }
+            };
+
+            const update = () => {
+                const visible = perView();
+                pageCount = Math.max(1, Math.ceil(slides.length / visible));
+                page = Math.min(page, pageCount - 1);
+                if (controls) controls.hidden = pageCount <= 1;
+                const slideIndex = Math.min(page * visible, Math.max(0, slides.length - visible));
+                const gap = parseFloat(getComputedStyle(track).gap) || 0;
+                const slideWidth = slides[0]?.getBoundingClientRect().width || 0;
+                track.style.transform = `translateX(-${slideIndex * (slideWidth + gap)}px)`;
+                renderDots();
+            };
+
+            const goTo = nextPage => {
+                page = (nextPage + pageCount) % pageCount;
+                update();
+            };
+
+            const startAutoPlay = () => {
+                window.clearInterval(timer);
+                if (!reduceMotion && pageCount > 1) timer = window.setInterval(() => goTo(page + 1), 6000);
+            };
+
+            previousButton?.addEventListener('click', () => { goTo(page - 1); startAutoPlay(); });
+            nextButton?.addEventListener('click', () => { goTo(page + 1); startAutoPlay(); });
+            carousel.addEventListener('mouseenter', () => window.clearInterval(timer));
+            carousel.addEventListener('mouseleave', startAutoPlay);
+            carousel.addEventListener('focusin', () => window.clearInterval(timer));
+            carousel.addEventListener('focusout', startAutoPlay);
+            carousel.addEventListener('touchstart', event => { touchStartX = event.touches[0].clientX; }, { passive: true });
+            carousel.addEventListener('touchend', event => {
+                if (touchStartX === null) return;
+                const distance = event.changedTouches[0].clientX - touchStartX;
+                if (Math.abs(distance) > 45) goTo(page + (distance < 0 ? 1 : -1));
+                touchStartX = null;
+                startAutoPlay();
+            }, { passive: true });
+            window.addEventListener('resize', update);
+
+            update();
+            startAutoPlay();
+        });
 
         // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

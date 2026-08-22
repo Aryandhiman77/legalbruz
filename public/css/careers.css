@@ -139,7 +139,7 @@
 
 .career-filter {
     display: grid;
-    grid-template-columns: 1fr 220px auto auto;
+    grid-template-columns: minmax(260px, 1fr) 245px 245px auto auto;
     gap: 10px;
     margin-bottom: 25px;
     padding: 10px;
@@ -296,6 +296,8 @@
 @media (max-width: 900px) {
     .career-detail-layout, .career-apply-layout { grid-template-columns: 1fr; }
     .career-detail-aside, .career-apply-aside { position: static; }
+    .career-filter { grid-template-columns: 1fr 1fr auto; }
+    .career-filter-search { grid-column: 1 / -1; }
 }
 
 @media (max-width: 650px) {
@@ -305,6 +307,7 @@
     .careers-section { padding: 42px 0; }
     .career-jobs { grid-template-columns: 1fr; }
     .career-filter { grid-template-columns: 1fr; }
+    .career-filter-search { grid-column: auto; }
     .career-section-heading { display: block; }
     .career-job-card { min-height: 280px; }
     .career-detail-hero { padding: 34px 0; }

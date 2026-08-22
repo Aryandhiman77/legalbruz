@@ -23,6 +23,7 @@ class CareerController extends Controller
                         ->orWhere('summary', 'like', "%{$search}%");
                 });
             })
+            ->when($request->filled('employment'), fn ($query) => $query->where('employment_type', $request->string('employment')))
             ->when($request->filled('workplace'), fn ($query) => $query->where('workplace_type', $request->string('workplace')))
             ->orderBy('sort_order')
             ->orderByDesc('created_at')
@@ -34,9 +35,15 @@ class CareerController extends Controller
             ->orderBy('workplace_type')
             ->pluck('workplace_type');
 
+        $employmentTypes = collect(['Full-time', 'Part-time', 'Contract', 'Internship'])
+            ->merge(CareerJob::query()->published()->pluck('employment_type'))
+            ->filter()
+            ->unique()
+            ->values();
+
         $openJobsCount = CareerJob::query()->published()->count();
 
-        return view('careers.index', compact('jobs', 'workplaceTypes', 'openJobsCount'));
+        return view('careers.index', compact('jobs', 'employmentTypes', 'workplaceTypes', 'openJobsCount'));
     }
 
     public function show(CareerJob $careerJob): View

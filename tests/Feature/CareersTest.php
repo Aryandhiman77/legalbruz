@@ -45,6 +45,37 @@ class CareersTest extends TestCase
         $this->get(route('careers.show', $expired))->assertNotFound();
     }
 
+    public function test_careers_filter_includes_and_filters_internships(): void
+    {
+        $internship = $this->createJob([
+            'title' => 'Legal Research Intern',
+            'employment_type' => 'Internship',
+            'workplace_type' => 'On-site',
+        ]);
+        $fullTimeRole = $this->createJob([
+            'title' => 'Client Success Executive',
+            'employment_type' => 'Full-time',
+            'workplace_type' => 'Hybrid',
+        ]);
+
+        $this->get(route('careers.index'))
+            ->assertOk()
+            ->assertSee('<option value="Internship"', false);
+
+        $this->get(route('careers.index', ['employment' => 'Internship']))
+            ->assertOk()
+            ->assertSee($internship->title)
+            ->assertDontSee($fullTimeRole->title);
+
+        $this->get(route('careers.index', [
+            'employment' => 'Internship',
+            'workplace' => 'On-site',
+        ]))
+            ->assertOk()
+            ->assertSee($internship->title)
+            ->assertDontSee($fullTimeRole->title);
+    }
+
     public function test_candidate_can_submit_application_with_private_resume(): void
     {
         Storage::fake('local');

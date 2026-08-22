@@ -30,11 +30,21 @@
                 </div>
 
                 <form class="career-filter" method="GET" action="{{ route('careers.index') }}">
-                    <div class="career-filter-field">
+                    <div class="career-filter-field career-filter-search">
                         <i class="bi bi-search"></i>
                         <label class="visually-hidden" for="career-search">Search jobs</label>
                         <input id="career-search" class="form-control" type="search" name="search"
                             value="{{ request('search') }}" placeholder="Search roles or locations">
+                    </div>
+                    <div class="career-filter-field">
+                        <i class="bi bi-briefcase"></i>
+                        <label class="visually-hidden" for="career-employment">Employment type</label>
+                        <select id="career-employment" class="form-select" name="employment">
+                            <option value="">All employment types</option>
+                            @foreach ($employmentTypes as $type)
+                                <option value="{{ $type }}" @selected(request('employment') === $type)>{{ $type }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="career-filter-field">
                         <i class="bi bi-building"></i>
@@ -47,7 +57,7 @@
                         </select>
                     </div>
                     <button class="career-button" type="submit">Search</button>
-                    @if (request()->hasAny(['search', 'workplace']))
+                    @if (request()->hasAny(['search', 'employment', 'workplace']))
                         <a class="career-filter-clear" href="{{ route('careers.index') }}#open-roles">Clear</a>
                     @endif
                 </form>
