@@ -2047,7 +2047,8 @@
     </section>
 
     <!-- ============ TESTIMONIALS SECTION ============ -->
-    @if ($customerReviews->isNotEmpty())
+    @php($displayedCustomerReviews = $customerReviews ?? collect())
+    @if ($displayedCustomerReviews->isNotEmpty())
     <section class="testimonials-section" id="testimonials">
         <div class="container">
             <div class="section-header">
@@ -2058,7 +2059,7 @@
             <div class="testimonials-carousel" data-testimonials-carousel aria-roledescription="carousel" aria-label="Customer reviews">
                 <div class="testimonials-viewport">
                     <div class="testimonials-track" data-testimonials-track>
-                        @foreach ($customerReviews as $review)
+                        @foreach ($displayedCustomerReviews as $review)
                             <article class="testimonial-card" data-testimonial-slide>
                                 <div class="stars" aria-label="{{ $review->rating }} out of 5 stars">
                                     <span aria-hidden="true">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
@@ -2075,7 +2076,7 @@
                         @endforeach
                     </div>
                 </div>
-                @if ($customerReviews->count() > 1)
+                @if ($displayedCustomerReviews->count() > 1)
                     <div class="testimonials-controls">
                         <button type="button" class="testimonial-arrow" data-testimonials-prev aria-label="Previous reviews">
                             <i class="bi bi-arrow-left" aria-hidden="true"></i>

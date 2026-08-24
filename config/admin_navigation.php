@@ -5,6 +5,7 @@ return [
         'label' => 'Overview',
         'items' => [
             ['label' => 'Dashboard', 'description' => 'Admin workspace overview', 'icon' => 'bi-grid-1x2', 'route' => 'admin.dashboard', 'active' => ['admin.dashboard']],
+            ['label' => 'Registered Users', 'description' => 'View registered website users', 'icon' => 'bi-people', 'route' => 'admin.users.index', 'active' => ['admin.users.*']],
         ],
     ],
     [

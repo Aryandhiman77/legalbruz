@@ -30,6 +30,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\AdminBlogController;
 use App\Http\Controllers\AdminCmsPageController;
 use App\Http\Controllers\AdminReviewController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\SeoController;
 
 Route::get('/', function () {
@@ -274,6 +275,7 @@ Route::middleware(['auth'])->group(function () {
 // ADMIN ROUTES
 Route::middleware(['admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
     Route::resource('/blogs', AdminBlogController::class)
         ->except('show')
         ->names([

@@ -27,6 +27,10 @@ class RegistrationTest extends TestCase
             'email' => 'mobile-user@example.com',
             'mobile' => '9876543210',
         ]);
+
+        $this->get('/home')
+            ->assertOk()
+            ->assertSee('Loved by Thousands');
     }
 
     public function test_registration_rejects_missing_or_invalid_indian_mobile_numbers(): void

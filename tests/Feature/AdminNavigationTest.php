@@ -34,6 +34,8 @@ class AdminNavigationTest extends TestCase
             ->assertSee('All Applications')
             ->assertSee('Oppose Cases')
             ->assertSee('Career Applications')
+            ->assertSee('Registered Users')
+            ->assertSee('View registered users')
             ->assertSee('Published reviews')
             ->assertSee('Manage reviews')
             ->assertSee('Log out')
@@ -41,6 +43,7 @@ class AdminNavigationTest extends TestCase
             ->assertSee(route('admin.blogs.index'), false)
             ->assertSee(route('admin.contact-messages.index'), false)
             ->assertSee(route('admin.reviews.index'), false)
+            ->assertSee(route('admin.users.index'), false)
             ->assertSee(route('admin.discount-coupons.index'), false);
     }
 
@@ -70,6 +73,7 @@ class AdminNavigationTest extends TestCase
         $this->assertNotEmpty($groups);
         $this->assertSame('Overview', $groups[0]['label']);
         $this->assertTrue(collect($groups)->pluck('items')->flatten(1)->contains('route', 'admin.reviews.index'));
+        $this->assertTrue(collect($groups)->pluck('items')->flatten(1)->contains('route', 'admin.users.index'));
 
         $admin = $this->createAdmin();
 
@@ -97,6 +101,7 @@ class AdminNavigationTest extends TestCase
             'admin.contact-messages.index' => 'new',
             'admin.faqs.index' => 'published',
             'admin.reviews.index' => 'published',
+            'admin.users.index' => 'verified',
             'admin.discount-coupons.index' => 'active',
         ];
 
