@@ -22,6 +22,13 @@ class PublicInformationPagesTest extends TestCase
             ->assertSee('anshul-sharma-founder.png', false);
         $this->get(route('terms'))->assertOk()->assertSee('Terms &amp; Conditions', false);
         $this->get(route('privacy'))->assertOk()->assertSee('Privacy Policy');
+        $this->get(route('flow-guide'))
+            ->assertOk()
+            ->assertSee('Detailed Step-by-Step Guide')
+            ->assertSee('complete-timeline-section', false)
+            ->assertSee('timeline-item-right', false)
+            ->assertSee('timeline-item-left', false)
+            ->assertDontSee('View Complete Flow Guide');
         $this->get(route('contact'))
             ->assertOk()
             ->assertSee("Let's Protect Your Brand", false)

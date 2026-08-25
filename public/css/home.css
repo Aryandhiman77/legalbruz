@@ -3034,10 +3034,6 @@ footer {
         display: none;
     }
 
-    .flow-step:nth-child(6) .step-circle {
-        display: none;
-    }
-
     .step-icon {
         width: 68px;
         height: 68px;

@@ -13,7 +13,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/RegistrationGuide.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/RegistrationGuide.css') }}?v={{ filemtime(public_path('css/RegistrationGuide.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/design-system.css') }}">
 
 
@@ -346,19 +346,42 @@
 
         @media (max-width: 1199px) {
             .flow-timeline {
-                grid-template-columns: repeat(4, minmax(150px, 1fr));
-                row-gap: 38px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 44px 24px;
+                max-width: 900px;
+                margin-inline: auto;
             }
 
             .flow-timeline::before,
             .flow-step::before {
                 display: none;
             }
+
+            .flow-step {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .flow-step::after {
+                display: none;
+            }
+
+            .flow-step:nth-child(6) .step-circle {
+                width: 62px;
+                height: 62px;
+                margin-top: 0;
+            }
+
+            .flow-card {
+                width: 100%;
+                min-height: 260px;
+            }
         }
 
         @media (max-width: 768px) {
             .flow-section {
-                padding: 72px 0 54px;
+                padding: 56px 0 44px;
             }
 
             .flow-section::before,
@@ -369,11 +392,12 @@
             }
 
             .flow-header {
-                margin-bottom: 44px;
+                margin-bottom: 32px;
             }
 
             .flow-header h2 {
-                font-size: clamp(2rem, 12vw, 3rem);
+                font-size: clamp(1.75rem, 9vw, 2.35rem);
+                line-height: 1.15;
             }
 
             .flow-header p {
@@ -382,40 +406,98 @@
 
             .flow-timeline {
                 grid-template-columns: 1fr;
-                gap: 28px;
-                max-width: 420px;
+                gap: 18px;
+                width: 100%;
+                max-width: 620px;
                 margin-inline: auto;
             }
 
+            .flow-step {
+                display: grid;
+                grid-template-columns: 48px minmax(0, 1fr);
+                gap: 14px;
+                align-items: start;
+                padding: 0;
+                text-align: left;
+            }
+
+            .flow-step:not(:last-child)::after {
+                content: "";
+                position: absolute;
+                top: 52px;
+                bottom: -18px;
+                left: 23px;
+                display: block;
+                width: 2px;
+                height: auto;
+                transform: none;
+                border-radius: 999px;
+                background: linear-gradient(180deg, rgba(10, 159, 145, 0.45), rgba(10, 159, 145, 0.12));
+            }
+
             .step-circle {
-                display: inline-flex;
-                margin-bottom: 42px;
+                display: flex;
+                width: 48px;
+                height: 48px;
+                margin: 0;
+                border-width: 4px;
+                font-size: 1.05rem;
             }
 
-            .step-circle::before {
-                bottom: -34px;
-                height: 32px;
-            }
-
+            .step-circle::before,
             .step-circle::after {
-                bottom: -39px;
+                display: none;
+            }
+
+            .flow-step:nth-child(6) .step-circle {
+                display: flex;
+                width: 48px;
+                height: 48px;
             }
 
             .flow-card {
+                display: grid;
+                grid-template-columns: 58px minmax(0, 1fr);
+                column-gap: 14px;
+                row-gap: 2px;
+                align-items: center;
                 min-height: auto;
-                padding: 30px 22px 24px;
+                padding: 16px;
+                border-radius: 14px;
+                text-align: left;
+            }
+
+            .flow-card::before {
+                display: none;
+            }
+
+            .flow-icon {
+                grid-column: 1;
+                grid-row: 1 / span 2;
+                width: 54px;
+                height: 54px;
+                margin: 0;
+                font-size: 1.5rem;
             }
 
             .flow-section .step-title {
+                grid-column: 2;
                 min-height: 0;
-                margin-bottom: 14px;
-                justify-content: center;
-                font-size: 1rem;
+                margin: 0 0 3px;
+                align-self: end;
+                text-align: left;
+                font-size: 0.98rem;
             }
 
             .flow-section .step-description {
+                grid-column: 2;
                 min-height: 0;
-                max-width: 260px;
+                max-width: none;
+                margin: 0;
+                align-self: start;
+                text-align: left;
+                font-size: 0.86rem;
+                line-height: 1.4;
             }
 
             .flow-action {
@@ -579,16 +661,6 @@
                 </div>
             </div>
 
-            <div class="flow-action">
-                <div class="flow-action-content">
-                    <div class="flow-action-icon"><i class="bi bi-shield-check"></i></div>
-                    <h3>Simple. Transparent. Hassle-free.</h3>
-                    <p>From application to registration, we make it easy.</p>
-                    <a href="{{ route('flow-guide') }}" class="flow-guide-btn">
-                        View Complete Flow Guide <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
         </div>
     </section>
 
@@ -842,7 +914,7 @@
     </section>
 
     <!-- ============ COMPLETE TIMELINE VIEW ============ -->
-    <section style="padding: 100px 0; background: var(--white);">
+    <section class="complete-timeline-section" style="padding: 100px 0; background: var(--white);">
         <div class="container">
             <div class="section-title">
                 <h2>Complete Timeline View</h2>
@@ -852,7 +924,7 @@
             <div class="timeline-visual">
                 <div class="timeline-line"></div>
 
-                <div class="timeline-item">
+                <div class="timeline-item timeline-item-right">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
                         <h4>🎯 Day 1: Registration & Preparation</h4>
@@ -862,7 +934,7 @@
                     </div>
                 </div>
 
-                <div class="timeline-item">
+                <div class="timeline-item timeline-item-left">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
                         <h4>📝 Day 2: Document Generation & Admin Filing</h4>
@@ -871,7 +943,7 @@
                     </div>
                 </div>
 
-                <div class="timeline-item">
+                <div class="timeline-item timeline-item-right">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
                         <h4>✅ Day 3: Confirmation & Monitoring</h4>
@@ -880,7 +952,7 @@
                     </div>
                 </div>
 
-                <div class="timeline-item">
+                <div class="timeline-item timeline-item-left">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
                         <h4>🎁 3-12 Months: IPO Processing</h4>
