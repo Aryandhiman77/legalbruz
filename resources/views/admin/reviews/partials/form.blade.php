@@ -11,7 +11,7 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <form method="POST" action="{{ $action }}">
+    <form method="POST" action="{{ $action }}" enctype="multipart/form-data">
         @csrf
         @if ($method !== 'POST') @method($method) @endif
         <div class="card border-0 shadow-sm">
@@ -31,6 +31,31 @@
                             value="{{ old('customer_title', $review->customer_title) }}" maxlength="160" required
                             placeholder="Founder, Tech Startup">
                         @error('customer_title') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="col-12">
+                        <label for="logo" class="form-label fw-bold">Customer photo or business logo <span class="text-muted fw-normal">(optional)</span></label>
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div class="review-logo-preview" data-review-logo-preview>
+                                @if ($review->logo_path)
+                                    <img src="{{ route('storage.public.view', ['path' => $review->logo_path]) }}" alt="Current logo">
+                                @else
+                                    <span>{{ $review->initials ?: 'Logo' }}</span>
+                                @endif
+                            </div>
+                            <div class="flex-grow-1" style="max-width:560px;">
+                                <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp"
+                                    class="form-control @error('logo') is-invalid @enderror" data-review-logo-input>
+                                <div class="form-text">JPG, PNG, or WebP. Maximum size 2 MB. The image is displayed inside a rounded container.</div>
+                                @error('logo') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                @if ($review->logo_path)
+                                    <div class="form-check mt-2">
+                                        <input type="hidden" name="remove_logo" value="0">
+                                        <input id="remove_logo" name="remove_logo" value="1" type="checkbox" class="form-check-input">
+                                        <label for="remove_logo" class="form-check-label">Remove current image and use initials</label>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                     <div class="col-12">
                         <label for="review" class="form-label fw-bold">Review</label>
@@ -73,3 +98,34 @@
         </div>
     </form>
 </div>
+
+<style>
+    .review-logo-preview {
+        display: grid;
+        place-items: center;
+        flex: 0 0 78px;
+        width: 78px;
+        height: 78px;
+        overflow: hidden;
+        border: 1px solid #cde2df;
+        border-radius: 50%;
+        color: #fff;
+        background: linear-gradient(135deg, #1D3557, #2A9D8F);
+        font-size: .78rem;
+        font-weight: 800;
+    }
+    .review-logo-preview img { width:100%;height:100%;padding:5px;object-fit:contain;background:#fff; }
+</style>
+
+<script>
+    document.querySelector('[data-review-logo-input]')?.addEventListener('change', event => {
+        const file = event.target.files?.[0];
+        const preview = document.querySelector('[data-review-logo-preview]');
+        if (!file || !preview) return;
+        const image = document.createElement('img');
+        image.alt = 'Selected logo preview';
+        image.src = URL.createObjectURL(file);
+        image.onload = () => URL.revokeObjectURL(image.src);
+        preview.replaceChildren(image);
+    });
+</script>

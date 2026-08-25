@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Admin;
 use App\Models\CustomerReview;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CustomerReviewTest extends TestCase
@@ -54,6 +56,8 @@ class CustomerReviewTest extends TestCase
 
     public function test_admin_can_create_update_and_delete_a_review(): void
     {
+        Storage::fake('public');
+
         $admin = Admin::create([
             'name' => 'Review Admin',
             'email' => 'reviews-admin@example.com',
@@ -68,10 +72,13 @@ class CustomerReviewTest extends TestCase
                 'rating' => 5,
                 'sort_order' => 40,
                 'is_active' => '1',
+                'logo' => UploadedFile::fake()->image('customer-logo.png', 240, 240),
             ])
             ->assertRedirect();
 
         $review = CustomerReview::where('customer_name', 'New Customer')->firstOrFail();
+        $originalLogoPath = $review->logo_path;
+        Storage::disk('public')->assertExists($originalLogoPath);
 
         $this->actingAs($admin, 'admin')
             ->put(route('admin.reviews.update', $review), [
@@ -81,6 +88,7 @@ class CustomerReviewTest extends TestCase
                 'rating' => 4,
                 'sort_order' => 15,
                 'is_active' => '0',
+                'logo' => UploadedFile::fake()->image('updated-logo.webp', 300, 300),
             ])
             ->assertRedirect(route('admin.reviews.edit', $review));
 
@@ -91,11 +99,16 @@ class CustomerReviewTest extends TestCase
             'sort_order' => 15,
             'is_active' => false,
         ]);
+        $updatedLogoPath = $review->fresh()->logo_path;
+        $this->assertNotSame($originalLogoPath, $updatedLogoPath);
+        Storage::disk('public')->assertMissing($originalLogoPath);
+        Storage::disk('public')->assertExists($updatedLogoPath);
 
         $this->actingAs($admin, 'admin')
             ->delete(route('admin.reviews.destroy', $review))
             ->assertRedirect(route('admin.reviews.index'));
 
         $this->assertDatabaseMissing('customer_reviews', ['id' => $review->id]);
+        Storage::disk('public')->assertMissing($updatedLogoPath);
     }
 }

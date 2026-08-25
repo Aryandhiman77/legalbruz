@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\CustomerReview;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class AdminReviewController extends Controller
 {
@@ -46,7 +48,23 @@ class AdminReviewController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $review = CustomerReview::create($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $newLogoPath = null;
+
+        if ($request->hasFile('logo')) {
+            $newLogoPath = $request->file('logo')->store('customer-reviews/logos', 'public');
+            $data['logo_path'] = $newLogoPath;
+        }
+
+        try {
+            $review = CustomerReview::create($data);
+        } catch (Throwable $exception) {
+            if ($newLogoPath) {
+                Storage::disk('public')->delete($newLogoPath);
+            }
+
+            throw $exception;
+        }
 
         return redirect()
             ->route('admin.reviews.edit', $review)
@@ -60,7 +78,30 @@ class AdminReviewController extends Controller
 
     public function update(Request $request, CustomerReview $review): RedirectResponse
     {
-        $review->update($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $oldLogoPath = $review->logo_path;
+        $newLogoPath = null;
+
+        if ($request->hasFile('logo')) {
+            $newLogoPath = $request->file('logo')->store('customer-reviews/logos', 'public');
+            $data['logo_path'] = $newLogoPath;
+        } elseif ($request->boolean('remove_logo')) {
+            $data['logo_path'] = null;
+        }
+
+        try {
+            $review->update($data);
+        } catch (Throwable $exception) {
+            if ($newLogoPath) {
+                Storage::disk('public')->delete($newLogoPath);
+            }
+
+            throw $exception;
+        }
+
+        if (array_key_exists('logo_path', $data) && $oldLogoPath && $oldLogoPath !== $data['logo_path']) {
+            Storage::disk('public')->delete($oldLogoPath);
+        }
 
         return redirect()
             ->route('admin.reviews.edit', $review)
@@ -69,7 +110,12 @@ class AdminReviewController extends Controller
 
     public function destroy(CustomerReview $review): RedirectResponse
     {
+        $logoPath = $review->logo_path;
         $review->delete();
+
+        if ($logoPath) {
+            Storage::disk('public')->delete($logoPath);
+        }
 
         return redirect()
             ->route('admin.reviews.index')
@@ -81,6 +127,8 @@ class AdminReviewController extends Controller
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_title' => ['required', 'string', 'max:160'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_logo' => ['nullable', Rule::in(['0', '1'])],
             'review' => ['required', 'string', 'max:2000'],
             'rating' => ['required', 'integer', 'between:1,5'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:65535'],
@@ -88,6 +136,7 @@ class AdminReviewController extends Controller
         ]);
 
         $data['is_active'] = $request->boolean('is_active');
+        unset($data['logo'], $data['remove_logo']);
 
         return $data;
     }

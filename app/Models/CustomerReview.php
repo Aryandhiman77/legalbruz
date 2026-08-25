@@ -12,6 +12,7 @@ class CustomerReview extends Model
     protected $fillable = [
         'customer_name',
         'customer_title',
+        'logo_path',
         'review',
         'rating',
         'sort_order',

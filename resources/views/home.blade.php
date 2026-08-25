@@ -2066,7 +2066,13 @@
                                 </div>
                                 <p class="testimonial-text">“{{ $review->review }}”</p>
                                 <div class="testimonial-author">
-                                    <div class="author-avatar" aria-hidden="true">{{ $review->initials }}</div>
+                                    <div class="author-avatar {{ $review->logo_path ? 'has-image' : '' }}" aria-hidden="true">
+                                        @if ($review->logo_path)
+                                            <img src="{{ route('storage.public.view', ['path' => $review->logo_path]) }}" alt="" loading="lazy">
+                                        @else
+                                            {{ $review->initials }}
+                                        @endif
+                                    </div>
                                     <div class="author-info">
                                         <div class="author-name">{{ $review->customer_name }}</div>
                                         <div class="author-title">{{ $review->customer_title }}</div>

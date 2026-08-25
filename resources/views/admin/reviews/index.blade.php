@@ -58,8 +58,19 @@
                                     <tr>
                                         <td>{{ $review->sort_order }}</td>
                                         <td>
-                                            <strong style="color:#1D3557;">{{ $review->customer_name }}</strong>
-                                            <div class="small text-muted">{{ $review->customer_title }}</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="d-grid place-items-center overflow-hidden rounded-circle border bg-white" style="width:42px;height:42px;flex:0 0 42px;place-items:center;">
+                                                    @if ($review->logo_path)
+                                                        <img src="{{ route('storage.public.view', ['path' => $review->logo_path]) }}" alt="" style="width:100%;height:100%;padding:3px;object-fit:contain;">
+                                                    @else
+                                                        <small class="fw-bold" style="color:#1D3557;">{{ $review->initials }}</small>
+                                                    @endif
+                                                </span>
+                                                <span>
+                                                    <strong class="d-block" style="color:#1D3557;">{{ $review->customer_name }}</strong>
+                                                    <span class="small text-muted">{{ $review->customer_title }}</span>
+                                                </span>
+                                            </div>
                                         </td>
                                         <td style="min-width:260px;">{{ Str::limit($review->review, 105) }}</td>
                                         <td><span class="text-warning" aria-label="{{ $review->rating }} out of 5 stars">{{ str_repeat('★', $review->rating) }}</span></td>
