@@ -1,42 +1,47 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\TrademarkController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AdminBlogController;
+use App\Http\Controllers\AdminCareerApplicationController;
+use App\Http\Controllers\AdminCareerJobController;
+use App\Http\Controllers\AdminCmsPageController;
+use App\Http\Controllers\AdminContactMessageController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminDiscountCouponController;
+use App\Http\Controllers\AdminFaqController;
+use App\Http\Controllers\AdminReviewController;
+use App\Http\Controllers\AdminTrademarkExecutionController;
+use App\Http\Controllers\AdminTrademarkPricingController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\Auth\AdminAuthController;
+use App\Http\Controllers\Auth\EmailOtpController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CareerController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\ExaminationReportReplyController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PostalCodeLookupController;
+use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\SeoController;
+use App\Http\Controllers\StuckTrademarkController;
+use App\Http\Controllers\TrademarkController;
+use App\Http\Controllers\TrademarkOppositionController;
+use App\Http\Controllers\TrademarkProbabilityController;
+use App\Http\Controllers\TrademarkScraperController;
 use App\Http\Controllers\UserDocumentController;
 use App\Http\Controllers\WorkflowController;
-use App\Http\Controllers\StuckTrademarkController;
-use App\Http\Controllers\AdminTrademarkExecutionController;
-use App\Http\Controllers\AdminDiscountCouponController;
-use App\Http\Controllers\AdminTrademarkPricingController;
-use App\Http\Controllers\PostalCodeLookupController;
-use App\Http\Controllers\TrademarkOppositionController;
-use App\Http\Controllers\ExaminationReportReplyController;
+use App\Models\CustomerReview;
+use App\Models\TrademarkPricing;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Controllers\TrademarkScraperController;
-use App\Http\Controllers\TrademarkProbabilityController;
-use App\Http\Controllers\PublicPageController;
-use App\Http\Controllers\AdminFaqController;
-use App\Http\Controllers\AdminContactMessageController;
-use App\Http\Controllers\CareerController;
-use App\Http\Controllers\AdminCareerJobController;
-use App\Http\Controllers\AdminCareerApplicationController;
-use App\Http\Controllers\BlogController;
-use App\Http\Controllers\AdminBlogController;
-use App\Http\Controllers\AdminCmsPageController;
-use App\Http\Controllers\AdminReviewController;
-use App\Http\Controllers\AdminUserController;
-use App\Http\Controllers\SeoController;
 
 Route::get('/', function () {
     return view('home', [
-        'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
-        'customerReviews' => \App\Models\CustomerReview::homepageReviews(),
+        'trademarkPricingPlans' => TrademarkPricing::activePlans(),
+        'customerReviews' => CustomerReview::homepageReviews(),
     ]);
 })->name('landing');
 
@@ -44,8 +49,8 @@ Route::get('/trademark-search', function () {
     return view('home', [
         'searchPage' => true,
         'keyword' => request()->query('keyword', ''),
-        'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
-        'customerReviews' => \App\Models\CustomerReview::homepageReviews(),
+        'trademarkPricingPlans' => TrademarkPricing::activePlans(),
+        'customerReviews' => CustomerReview::homepageReviews(),
     ]);
 })->name('trademark.search-page');
 
@@ -64,7 +69,7 @@ Route::get('/storage/{path}', function (string $path) {
     $path = preg_replace('#/+#', '/', $path);
     $path = ltrim($path, '/');
 
-    if ($path === '' || str_contains($path, '..') || !Storage::disk('public')->exists($path)) {
+    if ($path === '' || str_contains($path, '..') || ! Storage::disk('public')->exists($path)) {
         abort(404);
     }
 
@@ -122,11 +127,23 @@ Route::get('/login', function () {
     if (Auth::guard('web')->check()) {
         return redirect()->route('home');
     }
+
     // Otherwise show login form
     return view('auth.login');
 })->name('login');
 
-Auth::routes();
+Auth::routes(['verify' => false]);
+
+Route::middleware('guest')->group(function () {
+    Route::get('/email-otp', [EmailOtpController::class, 'show'])->name('auth.otp.show');
+    Route::post('/email-otp', [EmailOtpController::class, 'verify'])
+        ->middleware('throttle:10,1')
+        ->name('auth.otp.verify');
+    Route::post('/email-otp/resend', [EmailOtpController::class, 'resend'])
+        ->middleware('throttle:5,10')
+        ->name('auth.otp.resend');
+    Route::post('/email-otp/cancel', [EmailOtpController::class, 'cancel'])->name('auth.otp.cancel');
+});
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
@@ -140,7 +157,7 @@ Route::middleware(['auth'])->group(function () {
     // Trademark Application Flow (Single Pre-Payment Form)
     Route::get('/trademark/type-selection', function () {
         return view('trademark.application-form-modern', [
-            'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+            'trademarkPricingPlans' => TrademarkPricing::activePlans(),
         ]);
     })->name('trademark.type-selection');
 
@@ -150,7 +167,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/trademark/form/{type?}', function () {
         return view('trademark.application-form-modern', [
-            'trademarkPricingPlans' => \App\Models\TrademarkPricing::activePlans(),
+            'trademarkPricingPlans' => TrademarkPricing::activePlans(),
         ]);
     })->name('trademark.application-form');
     Route::post('/trademark/store', [TrademarkController::class, 'storeApplication'])->name('trademark.store');
@@ -179,7 +196,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/trademark/{id}/proof-of-use/view', [TrademarkController::class, 'viewProofOfUse'])->name('trademark.proof-of-use.view');
 
     // Document Editing - Save edited document content
-    Route::post('/documents/save-edited', [\App\Http\Controllers\DocumentController::class, 'saveEdited'])->name('documents.save-edited');
+    Route::post('/documents/save-edited', [DocumentController::class, 'saveEdited'])->name('documents.save-edited');
 
     // Status Tracking
     Route::get('/trademark/{id}/status', [TrademarkController::class, 'showStatus'])->name('trademark.status');
@@ -203,7 +220,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/application/{id}/post-filing/{stage}/documents', [WorkflowController::class, 'submitPostFilingDocuments'])->name('workflow.post-filing.documents');
 
     // Notifications
-    Route::post('/api/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notification.mark-read');
+    Route::post('/api/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notification.mark-read');
 
     // Trademark Opposition Management - Flow A: Defend My Trademark
     Route::get('/trademark-opposition/defend/create', [TrademarkOppositionController::class, 'create'])->name('trademark-opposition.create');

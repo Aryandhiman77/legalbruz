@@ -6,9 +6,11 @@
                 <i class="bi bi-list"></i>
             </button>
             <a class="admin-topbar-brand" href="{{ route('admin.dashboard') }}">
-                <span class="admin-topbar-logo"><img src="{{ asset('logo.png') }}" alt="Legal Bruz logo"></span>
+                <span class="admin-topbar-logo" aria-hidden="true">
+                    <img src="{{ asset('logo4.png') }}" alt="">
+                </span>
                 <span>
-                    <strong>Legal Bruz</strong>
+                    <strong>Legal Bruz LLP</strong>
                     <small>Administration</small>
                 </span>
             </a>

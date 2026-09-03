@@ -78,4 +78,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ExaminationReportReplyCase::class);
     }
+
+    public function emailOtps(): HasMany
+    {
+        return $this->hasMany(EmailOtp::class);
+    }
 }

@@ -1,98 +1,114 @@
 @extends('layouts.app')
 
+@section('title', 'Create Account | Legal Bruz')
+@section('body_class', 'auth-body')
+@section('head')
+    <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+@endsection
+
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">{{ __('Register') }}</div>
+<section class="auth-page">
+    <div class="auth-shell auth-shell--register">
+        @include('auth.partials.panel', ['mode' => 'register'])
 
-                <div class="card-body">
-                    <form method="POST" action="{{ route('register') }}">
-                        @csrf
+        <div class="auth-form-panel">
+            <div class="auth-form-wrap">
+                <header class="auth-heading">
+                    <span class="auth-heading-icon"><i class="bi bi-person-plus"></i></span>
+                    <div>
+                        <h2>Register</h2>
+                        <p>Fill in the details below to create your account</p>
+                    </div>
+                </header>
 
-                        <div class="row mb-3">
-                            <label for="name" class="col-md-4 col-form-label text-md-end">{{ __('Name') }}</label>
+                <form method="POST" action="{{ route('register') }}" data-auth-form>
+                    @csrf
 
-                            <div class="col-md-6">
-                                <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required autocomplete="name" autofocus>
-
-                                @error('name')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
+                    <div class="auth-field">
+                        <label for="name">Full Name</label>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-person auth-input-icon" aria-hidden="true"></i>
+                            <input id="name" type="text" class="auth-input @error('name') is-invalid @enderror"
+                                name="name" value="{{ old('name') }}" required minlength="2" maxlength="100"
+                                autocomplete="name" autofocus placeholder="Enter your full name">
                         </div>
+                        @error('name')<span class="auth-error" role="alert">{{ $message }}</span>@enderror
+                    </div>
 
-                        <div class="row mb-3">
-                            <label for="email" class="col-md-4 col-form-label text-md-end">{{ __('Email Address') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email">
-
-                                @error('email')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
+                    <div class="auth-field">
+                        <label for="email">Email Address</label>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-envelope auth-input-icon" aria-hidden="true"></i>
+                            <input id="email" type="email" class="auth-input @error('email') is-invalid @enderror"
+                                name="email" value="{{ old('email') }}" required maxlength="255"
+                                autocomplete="email" inputmode="email" placeholder="Enter your email address">
                         </div>
+                        @error('email')<span class="auth-error" role="alert">{{ $message }}</span>@enderror
+                    </div>
 
-                        <div class="row mb-3">
-                            <label for="mobile" class="col-md-4 col-form-label text-md-end">{{ __('Indian Mobile Number') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="mobile" type="tel"
-                                    class="form-control @error('mobile') is-invalid @enderror"
-                                    name="mobile" value="{{ old('mobile') }}" required inputmode="numeric"
-                                    autocomplete="tel-national" maxlength="13"
-                                    pattern="(?:(?:\+?91)|0)?[6-9][0-9]{9}"
-                                    placeholder="9876543210"
-                                    title="Enter a valid 10-digit Indian mobile number">
-                                <small class="form-text text-muted">Use a 10-digit Indian number beginning with 6, 7, 8, or 9.</small>
-
-                                @error('mobile')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
+                    <div class="auth-field">
+                        <label for="mobile">Indian Mobile Number</label>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-telephone auth-input-icon" aria-hidden="true"></i>
+                            <input id="mobile" type="tel" class="auth-input @error('mobile') is-invalid @enderror"
+                                name="mobile" value="{{ old('mobile') }}" required inputmode="numeric" maxlength="13"
+                                autocomplete="tel-national" pattern="(?:(?:\+?91)|0)?[6-9][0-9]{9}"
+                                placeholder="9876543210" title="Enter a valid Indian mobile number">
                         </div>
+                        <small class="auth-help">Use a 10-digit Indian number beginning with 6, 7, 8, or 9.</small>
+                        @error('mobile')<span class="auth-error" role="alert">{{ $message }}</span>@enderror
+                    </div>
 
-                        <div class="row mb-3">
-                            <label for="password" class="col-md-4 col-form-label text-md-end">{{ __('Password') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password">
-
-                                @error('password')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
+                    <div class="auth-field">
+                        <label for="password">Password</label>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-lock auth-input-icon" aria-hidden="true"></i>
+                            <input id="password" type="password" class="auth-input @error('password') is-invalid @enderror"
+                                name="password" required minlength="8" autocomplete="new-password"
+                                pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}" placeholder="Create a password"
+                                title="Use at least 8 characters, including a letter and a number">
+                            <button type="button" class="auth-toggle-password" data-password-toggle="password" aria-label="Show password">
+                                <i class="bi bi-eye" aria-hidden="true"></i>
+                            </button>
                         </div>
+                        <small class="auth-help">At least 8 characters with a letter and a number.</small>
+                        @error('password')<span class="auth-error" role="alert">{{ $message }}</span>@enderror
+                    </div>
 
-                        <div class="row mb-3">
-                            <label for="password-confirm" class="col-md-4 col-form-label text-md-end">{{ __('Confirm Password') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
-                            </div>
+                    <div class="auth-field">
+                        <label for="password-confirm">Confirm Password</label>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-lock-fill auth-input-icon" aria-hidden="true"></i>
+                            <input id="password-confirm" type="password" class="auth-input"
+                                name="password_confirmation" required minlength="8" autocomplete="new-password"
+                                placeholder="Confirm your password">
+                            <button type="button" class="auth-toggle-password" data-password-toggle="password-confirm" aria-label="Show password">
+                                <i class="bi bi-eye" aria-hidden="true"></i>
+                            </button>
                         </div>
+                    </div>
 
-                        <div class="row mb-0">
-                            <div class="col-md-6 offset-md-4">
-                                <button type="submit" class="btn btn-primary">
-                                    {{ __('Register') }}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+                    <button type="submit" class="auth-submit" data-loading-text="Creating account…">
+                        <i class="bi bi-person-check" aria-hidden="true"></i>
+                        <span data-submit-label>Register</span>
+                    </button>
+
+                    <div class="auth-separator">or</div>
+                    <p class="auth-switch">Already have an account? <a class="auth-link" href="{{ route('login') }}">Login</a></p>
+                </form>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+@include('auth.partials.scripts')
+<script>
+    const password = document.getElementById('password');
+    const confirmation = document.getElementById('password-confirm');
+    const validateConfirmation = () => confirmation.setCustomValidity(
+        confirmation.value && confirmation.value !== password.value ? 'Passwords do not match.' : ''
+    );
+    password.addEventListener('input', validateConfirmation);
+    confirmation.addEventListener('input', validateConfirmation);
+</script>
 @endsection

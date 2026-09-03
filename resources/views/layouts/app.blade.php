@@ -605,20 +605,26 @@
         }
 
         .admin-topbar-logo {
+            position: relative;
             display: grid;
             place-items: center;
             width: 44px;
             height: 44px;
             overflow: hidden;
-            border: 1px solid #e0e7ef;
-            border-radius: 10px;
+            border: 0;
+            border-radius: 50%;
             background: #fff;
+            box-shadow: 0 4px 12px rgba(7, 31, 72, .14);
         }
 
         .admin-topbar-logo img {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
+            position: absolute;
+            top: 1px;
+            left: 50%;
+            width: 84px;
+            max-width: none;
+            height: auto;
+            transform: translateX(-50%);
         }
 
         .admin-topbar-brand strong,
@@ -1155,7 +1161,7 @@
     </style>
 </head>
 
-<body>
+<body class="@yield('body_class')">
     <div id="app">
         <!-- ============ NAVBAR ============ -->
         @if (request()->is('admin*') && Auth::guard('admin')->check())
