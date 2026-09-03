@@ -2,7 +2,7 @@
     $brandName = config('app.name', 'Legal Bruz LLP');
     $brandEmail = config('mail.from.address', 'info@legalbruz.com');
     $brandUrl = config('app.url');
-    $logoUrl = asset('logo.png');
+    $logoUrl = asset('logo4-mark.png');
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -41,7 +41,7 @@
 
         .brand-logo img {
             display: block;
-            width: 170px;
+            width: 96px;
             max-width: 100%;
             height: auto;
             margin: 0 auto 12px;
@@ -208,7 +208,7 @@
 
         .footer-logo img {
             display: block;
-            width: 150px;
+            width: 72px;
             max-width: 100%;
             height: auto;
             margin: 0 auto 14px;
@@ -253,8 +253,7 @@
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" bgcolor="#f8fcfd" style="background-color:#f8fcfd !important; background:#f8fcfd !important; color:#102a4c !important; border-bottom:1px solid #dbe7ee !important;">
             <tr>
                 <td align="center" bgcolor="#f8fcfd" style="background-color:#f8fcfd !important; background:#f8fcfd !important; padding:28px 32px 18px; text-align:center; color:#102a4c !important;">
-                    <img src="{{ $logoUrl }}" alt="{{ $brandName }}" width="170" style="display:block; width:170px; max-width:100%; height:auto; margin:0 auto 12px;">
-                    <h2 style="margin:0 0 8px; color:#102a4c !important; font-size:22px; font-weight:800;">{{ $brandName }}</h2>
+                    <img src="{{ $logoUrl }}" alt="Legal Bruz LLP logo" width="96" style="display:block; width:96px; max-width:100%; height:auto; margin:0 auto 12px;">
                     <p style="margin:0; color:#5f6e84 !important; font-size:14px; font-weight:700;">@yield('email_title', 'Application update')</p>
                 </td>
             </tr>
@@ -272,8 +271,7 @@
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" bgcolor="#f8fcfd" style="background-color:#f8fcfd !important; background:#f8fcfd !important; color:#334155 !important; border-top:6px solid #0f9f90 !important;">
             <tr>
                 <td align="center" bgcolor="#f8fcfd" style="background-color:#f8fcfd !important; background:#f8fcfd !important; padding:22px 32px; text-align:center; color:#334155 !important;">
-                    <img src="{{ $logoUrl }}" alt="{{ $brandName }}" width="150" style="display:block; width:150px; max-width:100%; height:auto; margin:0 auto 14px;">
-                    <p style="margin:4px 0; color:#334155 !important;"><strong>{{ $brandName }}</strong></p>
+                    <img src="{{ $logoUrl }}" alt="Legal Bruz LLP logo" width="72" style="display:block; width:72px; max-width:100%; height:auto; margin:0 auto 14px;">
                     <p style="margin:4px 0; color:#334155 !important;">Email: <a href="mailto:{{ $brandEmail }}" style="color:#0f766e !important;">{{ $brandEmail }}</a></p>
                     @if ($brandUrl)
                         <p style="margin:4px 0; color:#334155 !important;">Website: <a href="{{ $brandUrl }}" style="color:#0f766e !important;">{{ $brandUrl }}</a></p>
