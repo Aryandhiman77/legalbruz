@@ -112,6 +112,86 @@
             color: #159447;
         }
 
+        .dashboard-service-links {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .dashboard-service-link {
+            display: flex;
+            align-items: center;
+            min-height: 72px;
+            padding: 17px 20px;
+            border: 0;
+            border-radius: 12px;
+            color: #ffffff;
+            text-decoration: none;
+            box-shadow: 0 9px 22px rgba(15, 23, 42, 0.16);
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+        }
+
+        .dashboard-service-link:hover {
+            color: #ffffff;
+            box-shadow: 0 13px 28px rgba(15, 23, 42, 0.22);
+            transform: translateY(-2px);
+            filter: brightness(1.06);
+        }
+
+        .dashboard-service-link:nth-child(1) {
+            background: linear-gradient(135deg, #0f9f8b, #087b70);
+        }
+
+        .dashboard-service-link:nth-child(2) {
+            background: linear-gradient(135deg, #2563eb, #1746af);
+        }
+
+        .dashboard-service-link:nth-child(3) {
+            background: linear-gradient(135deg, #7c3aed, #5621ad);
+        }
+
+        .dashboard-service-link:nth-child(4) {
+            background: linear-gradient(135deg, #e87916, #bd4e0c);
+        }
+
+        .dashboard-service-link-copy {
+            min-width: 0;
+        }
+
+        .dashboard-service-link-copy strong,
+        .dashboard-service-link-copy small {
+            display: block;
+        }
+
+        .dashboard-service-link-copy strong {
+            font-size: .9rem;
+            font-weight: 850;
+            line-height: 1.25;
+        }
+
+        .dashboard-service-link-copy small {
+            margin-top: 4px;
+            color: rgba(255, 255, 255, 0.84);
+            font-size: .75rem;
+            line-height: 1.3;
+        }
+
+        .dashboard-empty-state {
+            padding: 34px 20px;
+            text-align: center;
+        }
+
+        .dashboard-empty-state i {
+            margin-bottom: 11px;
+            color: #94a3b8;
+            font-size: 1.8rem;
+        }
+
+        .dashboard-empty-state p {
+            margin: 0 0 14px;
+            color: #667085;
+        }
+
         .dashboard-section-card {
             overflow: hidden;
             border: 1px solid #d8e2ef;
@@ -583,6 +663,10 @@
         }
 
         @media (max-width: 991.98px) {
+            .dashboard-service-links {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .dashboard-table-box {
                 display: none;
             }
@@ -633,6 +717,10 @@
         @media (max-width: 767.98px) {
             .dashboard-section-head {
                 padding: 16px 18px;
+            }
+
+            .dashboard-service-links {
+                grid-template-columns: 1fr;
             }
 
             .dashboard-table-wrap {
@@ -803,17 +891,27 @@
             </div>
         </div>
 
-        <!-- New Application Button -->
+        <!-- Service Quick Links -->
         <div class="row mb-4">
             <div class="col-md-12">
-                <a href="{{ route('trademark.type-selection') }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-plus"></i> Start New Trademark Application
-                </a>
+                <div class="dashboard-service-links" aria-label="Start a trademark service">
+                    <a href="{{ route('trademark.type-selection') }}" class="dashboard-service-link">
+                        <span class="dashboard-service-link-copy"><strong>File a Trademark</strong><small>Start a new application</small></span>
+                    </a>
+                    <a href="{{ route('stuck-trademark.landing') }}" class="dashboard-service-link">
+                        <span class="dashboard-service-link-copy"><strong>Filed and Stuck</strong><small>Recover a delayed application</small></span>
+                    </a>
+                    <a href="{{ route('trademark.opposition-management') }}" class="dashboard-service-link">
+                        <span class="dashboard-service-link-copy"><strong>Opposition Management</strong><small>Defend or oppose a trademark</small></span>
+                    </a>
+                    <a href="{{ route('examination-reply.create') }}" class="dashboard-service-link">
+                        <span class="dashboard-service-link-copy"><strong>Examination Reply</strong><small>Respond to an objection</small></span>
+                    </a>
+                </div>
             </div>
         </div>
 
         <!-- Applications List -->
-        @if (($trademarkOppositionCases ?? collect())->count())
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="dashboard-section-card">
@@ -827,6 +925,7 @@
                             <h5 class="dashboard-section-title">Trademark Opposition Defence Cases</h5>
                         </div>
                         <div class="dashboard-table-wrap">
+                            @if ($trademarkOppositionCases->count())
                             <div class="table-responsive dashboard-table-box">
                                 <table class="table table-hover mb-0 align-middle dashboard-table">
                                     <thead>
@@ -962,13 +1061,18 @@
                                     </article>
                                 @endforeach
                             </div>
+                            @else
+                                <div class="dashboard-empty-state">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <p>No opposition defence cases yet.</p>
+                                    <a href="{{ route('trademark-opposition.create') }}" class="btn btn-primary">Defend My Trademark</a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
-        @endif
 
-        @if (($trademarkOpposeCases ?? collect())->count())
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="dashboard-section-card">
@@ -976,7 +1080,9 @@
                             <span class="dashboard-section-icon"><i class="fas fa-gavel"></i></span>
                             <h5 class="dashboard-section-title">Trademark Opposition Filing Cases</h5>
                         </div>
-                        <div class="dashboard-table-wrap"><div class="table-responsive dashboard-table-box">
+                        <div class="dashboard-table-wrap">
+                        @if ($trademarkOpposeCases->count())
+                        <div class="table-responsive dashboard-table-box">
                             <table class="table table-hover mb-0 align-middle dashboard-table">
                                 <thead><tr><th>Case</th><th>Your Trademark</th><th>Trademark Opposed</th><th>Status</th><th>Recommendation</th><th>Payment</th><th>Action</th></tr></thead>
                                 <tbody>
@@ -1042,13 +1148,18 @@
                                 </article>
                             @endforeach
                         </div>
+                        @else
+                            <div class="dashboard-empty-state">
+                                <i class="fas fa-gavel"></i>
+                                <p>No opposition filing cases yet.</p>
+                                <a href="{{ route('trademark-opposition.oppose.create') }}" class="btn btn-primary">Oppose a Trademark</a>
+                            </div>
+                        @endif
                         </div>
                     </div>
                 </div>
             </div>
-        @endif
 
-        @if (($examinationReplyCases ?? collect())->count())
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="dashboard-section-card">
@@ -1056,7 +1167,9 @@
                             <span class="dashboard-section-icon"><i class="fas fa-file-signature"></i></span>
                             <h5 class="dashboard-section-title">Trademark Objection Reply Cases</h5>
                         </div>
-                        <div class="dashboard-table-wrap"><div class="table-responsive dashboard-table-box">
+                        <div class="dashboard-table-wrap">
+                        @if ($examinationReplyCases->count())
+                        <div class="table-responsive dashboard-table-box">
                             <table class="table table-hover mb-0 align-middle dashboard-table">
                                 <thead><tr><th>Case</th><th>Trademark</th><th>Deadline</th><th>Status</th><th>Risk</th><th>Payment</th><th>Action</th></tr></thead>
                                 <tbody>
@@ -1136,13 +1249,18 @@
                                 </article>
                             @endforeach
                         </div>
+                        @else
+                            <div class="dashboard-empty-state">
+                                <i class="fas fa-file-signature"></i>
+                                <p>No trademark objection reply cases yet.</p>
+                                <a href="{{ route('examination-reply.create') }}" class="btn btn-primary">Start an Examination Reply</a>
+                            </div>
+                        @endif
                         </div>
                     </div>
                 </div>
             </div>
-        @endif
 
-        @if (($stuckTrademarkCases ?? collect())->count())
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="dashboard-section-card">
@@ -1162,6 +1280,7 @@
                             <h5 class="dashboard-section-title">Stuck Trademark Recovery Cases</h5>
                         </div>
                         <div class="dashboard-table-wrap">
+                            @if ($stuckTrademarkCases->count())
                             <div class="table-responsive dashboard-table-box">
                                 <table class="table table-hover mb-0 align-middle dashboard-table">
                                     <thead>
@@ -1325,12 +1444,17 @@
                                     </article>
                                 @endforeach
                             </div>
+                            @else
+                                <div class="dashboard-empty-state">
+                                    <i class="fas fa-undo-alt"></i>
+                                    <p>No stuck trademark recovery cases yet.</p>
+                                    <a href="{{ route('stuck-trademark.landing') }}" class="btn btn-primary">Recover a Stuck Trademark</a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
-        @endif
-
         <div class="row">
             <div class="col-md-12">
                 <div class="dashboard-section-card">

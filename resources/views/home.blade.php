@@ -1715,7 +1715,7 @@
         <div class="container">
             <div class="section-header">
                 <h2>Why Choose Legal Bruz LLP?</h2>
-                <p>We make trademark registration simple, affordable, and guaranteed</p>
+                <p>We make trademark registration simple and affordable.</p>
             </div>
 
             <div class="benefits-grid">
