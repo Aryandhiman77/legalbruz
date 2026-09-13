@@ -1,7 +1,28 @@
 @extends('layouts.app')
 
 @section('head')
-    @vite('resources/js/pdf-editor.js')
+    @php
+        $viteManifestPath = public_path('build/manifest.json');
+        $viteManifest = is_file($viteManifestPath)
+            ? json_decode((string) file_get_contents($viteManifestPath), true)
+            : [];
+        $hasPdfEditorBundle = is_file(public_path('hot'))
+            || isset($viteManifest['resources/js/pdf-editor.js']);
+    @endphp
+
+    @if ($hasPdfEditorBundle)
+        @vite('resources/js/pdf-editor.js')
+    @else
+        {{-- Keep the admin review page available when production assets have not
+             been rebuilt yet. The next normal npm build switches back to the
+             locally hosted bundle automatically. --}}
+        <script type="module">
+            import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
+
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
+            window.pdfjsLib = pdfjsLib;
+        </script>
+    @endif
 @endsection
 
 @section('content')
