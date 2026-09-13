@@ -97,7 +97,7 @@
                             class="signing-builder"
                             data-signing-builder="{{ $documentType }}"
                             @if ($existingDocument)
-                                data-existing-document-url="{{ route('admin.document.view', $existingDocument->id) }}#toolbar=0&navpanes=0&view=FitH"
+                                data-existing-document-url="{{ route('admin.document.view', $existingDocument->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
                                 data-existing-document-name="{{ $existingDocument->file_name }}"
                             @endif
                         >
@@ -116,8 +116,9 @@
                                         </button>
                                     </div>
                                     <div class="pdf-canvas" data-pdf-canvas="{{ $documentType }}">
-                                        <div class="pdf-page-stage" data-pdf-stage="{{ $documentType }}">
-                                            <iframe title="{{ $documentLabel }} preview" data-pdf-frame="{{ $documentType }}"></iframe>
+                                        <div class="pdf-document" data-pdf-document="{{ $documentType }}">
+                                            <div class="pdf-loading" data-pdf-loading="{{ $documentType }}">Loading PDF…</div>
+                                            <div class="pdf-pages" data-pdf-pages="{{ $documentType }}"></div>
                                             <div class="placed-field placed-field-signature d-none" data-placed-field="{{ $documentType }}:signature" draggable="true">
                                                 <i class="bi bi-pencil"></i> Sign here
                                                 <span class="placed-field-resize" data-resize-field="{{ $documentType }}:signature" aria-hidden="true"></span>
@@ -457,28 +458,53 @@
         position: relative;
         flex: 1 1 auto;
         min-height: 0;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
         background: #2b333c;
         padding: 18px;
     }
 
+    .pdf-document,
+    .pdf-pages {
+        width: 100%;
+    }
+
+    .pdf-pages {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .pdf-loading {
+        display: grid;
+        min-height: 240px;
+        place-items: center;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .pdf-loading.d-none + .pdf-pages:empty::after {
+        content: 'The PDF preview could not be loaded.';
+        display: block;
+        color: #fff;
+        text-align: center;
+        padding: 40px 16px;
+    }
+
     .pdf-page-stage {
         position: relative;
+        flex: 0 0 auto;
         width: min(100%, 760px);
-        aspect-ratio: 210 / 297;
-        margin: 0 auto;
         background: #fff;
         box-shadow: 0 14px 35px rgba(15, 23, 42, 0.24);
     }
 
-    .pdf-page-stage iframe {
-        position: absolute;
-        inset: 0;
+    .pdf-page-stage canvas {
+        display: block;
         width: 100%;
         height: 100%;
-        border: 0;
-        background: #fff;
-        pointer-events: none;
     }
 
     .placed-field {
@@ -675,10 +701,6 @@
             overflow: visible;
         }
 
-        .pdf-page-stage,
-        .pdf-page-stage iframe {
-            min-height: 760px;
-        }
     }
 </style>
 
@@ -800,10 +822,10 @@
             const fileInput = document.querySelector(`[data-signing-file-input="${docType}"]`);
             const dropzone = builder.querySelector(`[data-dropzone="${docType}"]`);
             const shell = builder.querySelector(`[data-preview-shell="${docType}"]`);
-            const frame = builder.querySelector(`[data-pdf-frame="${docType}"]`);
             const canvas = builder.querySelector(`[data-pdf-canvas="${docType}"]`);
-            const stage = builder.querySelector(`[data-pdf-stage="${docType}"]`);
-            const filename = document.querySelector(`[data-file-name-for="${docType}"]`);
+            const pdfDocument = builder.querySelector(`[data-pdf-document="${docType}"]`);
+            const pages = builder.querySelector(`[data-pdf-pages="${docType}"]`);
+            const loading = builder.querySelector(`[data-pdf-loading="${docType}"]`);
             const previewFilename = builder.querySelector(`[data-preview-filename="${docType}"]`);
             const reattach = builder.querySelector(`[data-reattach="${docType}"]`);
             const existingDocumentUrl = builder.dataset.existingDocumentUrl;
@@ -811,6 +833,8 @@
             const modal = builder.closest('.signing-modal');
             let selectedFieldType = 'signature';
             let resizingField = null;
+            let pageCount = 0;
+            let renderVersion = 0;
 
             const mmPage = { width: 210, height: 297 };
 
@@ -826,33 +850,52 @@
                 return builder.querySelector(`[data-placed-field="${docType}:${type}"]`);
             }
 
-            function toMmX(px) {
+            function pageStage(pageNumber) {
+                const number = Math.max(1, Math.min(Number(pageNumber) || 1, pageCount || 1));
+                return pages.querySelector(`[data-pdf-page="${number}"]`) || pages.querySelector('[data-pdf-page]');
+            }
+
+            function fieldStage(type) {
+                return fieldEl(type).closest('[data-pdf-page]') || pageStage(inputFor(type, 'page')?.value);
+            }
+
+            function toMmX(px, stage) {
                 return (px / stage.clientWidth) * mmPage.width;
             }
 
-            function toMmY(px) {
+            function toMmY(px, stage) {
                 return (px / stage.clientHeight) * mmPage.height;
             }
 
-            function toPxX(mm) {
+            function toPxX(mm, stage) {
                 return (Number(mm) / mmPage.width) * stage.clientWidth;
             }
 
-            function toPxY(mm) {
+            function toPxY(mm, stage) {
                 return (Number(mm) / mmPage.height) * stage.clientHeight;
             }
 
-            function ensureFieldVisible(type) {
+            function ensureFieldVisible(type, targetStage = null) {
                 const field = fieldEl(type);
+                const stage = targetStage || fieldStage(type);
+
+                if (!stage) {
+                    return field;
+                }
+
+                if (field.parentElement !== stage) {
+                    stage.appendChild(field);
+                }
+
                 field.classList.remove('d-none');
                 inputFor(type, 'enabled').value = '1';
 
                 if (!field.style.width) {
-                    field.style.width = `${toPxX(type === 'date' ? 38 : 65)}px`;
+                    field.style.width = `${toPxX(type === 'date' ? 38 : 65, stage)}px`;
                 }
 
                 if (!field.style.height) {
-                    field.style.height = `${toPxY(type === 'date' ? 10 : 18)}px`;
+                    field.style.height = `${toPxY(type === 'date' ? 10 : 18, stage)}px`;
                 }
 
                 return field;
@@ -886,29 +929,38 @@
 
             function writePlacement(type, leftPx, topPx) {
                 const field = ensureFieldVisible(type);
+                const stage = fieldStage(type);
+                if (!stage) return;
                 const widthPx = field.offsetWidth;
                 const heightPx = field.offsetHeight;
-                inputFor(type, 'page').value = propInput('page').value || 1;
-                inputFor(type, 'x').value = toMmX(leftPx).toFixed(1);
-                inputFor(type, 'y').value = toMmY(topPx).toFixed(1);
-                inputFor(type, 'width').value = toMmX(widthPx).toFixed(1);
-                inputFor(type, 'height').value = toMmY(heightPx).toFixed(1);
+                inputFor(type, 'page').value = stage.dataset.pdfPage;
+                inputFor(type, 'x').value = toMmX(leftPx, stage).toFixed(1);
+                inputFor(type, 'y').value = toMmY(topPx, stage).toFixed(1);
+                inputFor(type, 'width').value = toMmX(widthPx, stage).toFixed(1);
+                inputFor(type, 'height').value = toMmY(heightPx, stage).toFixed(1);
+                field.style.left = `${(leftPx / stage.clientWidth) * 100}%`;
+                field.style.top = `${(topPx / stage.clientHeight) * 100}%`;
+                field.style.width = `${(widthPx / stage.clientWidth) * 100}%`;
+                field.style.height = `${(heightPx / stage.clientHeight) * 100}%`;
                 syncProperties(type);
             }
 
             function clampSize(type, widthPx, heightPx) {
+                const stage = fieldStage(type);
                 const minimums = type === 'date'
                     ? { width: 70, height: 30 }
                     : { width: 120, height: 42 };
 
                 return {
-                    width: Math.max(minimums.width, Math.min(widthPx, stage.clientWidth)),
-                    height: Math.max(minimums.height, Math.min(heightPx, stage.clientHeight)),
+                    width: Math.max(minimums.width, Math.min(widthPx, stage?.clientWidth || widthPx)),
+                    height: Math.max(minimums.height, Math.min(heightPx, stage?.clientHeight || heightPx)),
                 };
             }
 
             function resizeField(type, widthPx, heightPx) {
                 const field = ensureFieldVisible(type);
+                const stage = fieldStage(type);
+                if (!stage) return;
                 const size = clampSize(type, widthPx, heightPx);
                 const maxWidth = Math.max(type === 'date' ? 70 : 120, stage.clientWidth - field.offsetLeft);
                 const maxHeight = Math.max(type === 'date' ? 30 : 42, stage.clientHeight - field.offsetTop);
@@ -936,24 +988,17 @@
                     return;
                 }
 
-                const field = ensureFieldVisible(type);
-                const x = toPxX(inputFor(type, 'x').value || 0);
-                const y = toPxY(inputFor(type, 'y').value || 0);
-                field.style.width = `${toPxX(inputFor(type, 'width').value || 42)}px`;
-                field.style.height = `${toPxY(inputFor(type, 'height').value || 12)}px`;
-                field.style.left = `${Math.max(0, Math.min(x, stage.clientWidth - field.offsetWidth))}px`;
-                field.style.top = `${Math.max(0, Math.min(y, stage.clientHeight - field.offsetHeight))}px`;
+                const stage = pageStage(inputFor(type, 'page').value);
+                if (!stage) return;
+                const field = ensureFieldVisible(type, stage);
+                field.style.left = `${(Number(inputFor(type, 'x').value || 0) / mmPage.width) * 100}%`;
+                field.style.top = `${(Number(inputFor(type, 'y').value || 0) / mmPage.height) * 100}%`;
+                field.style.width = `${(Number(inputFor(type, 'width').value || 42) / mmPage.width) * 100}%`;
+                field.style.height = `${(Number(inputFor(type, 'height').value || 12) / mmPage.height) * 100}%`;
             }
 
-            function placeSavedFieldsWhenReady(attempt = 0) {
-                if (stage.clientWidth <= 0 || stage.clientHeight <= 0) {
-                    if (attempt < 8) {
-                        window.setTimeout(() => placeSavedFieldsWhenReady(attempt + 1), 60);
-                    }
-
-                    return;
-                }
-
+            function placeSavedFieldsWhenReady() {
+                if (!pageStage(1)) return;
                 placeFromHidden('signature');
                 placeFromHidden('date');
                 if ((inputFor('signature', 'enabled')?.value || '0') === '1') {
@@ -966,32 +1011,92 @@
             }
 
             function applyPropertiesToSelectedField() {
-                const field = ensureFieldVisible(selectedFieldType);
                 ['page', 'x', 'y', 'width', 'height'].forEach((key) => {
                     inputFor(selectedFieldType, key).value = propInput(key).value;
                 });
-                field.style.left = `${toPxX(inputFor(selectedFieldType, 'x').value || 0)}px`;
-                field.style.top = `${toPxY(inputFor(selectedFieldType, 'y').value || 0)}px`;
-                field.style.width = `${toPxX(inputFor(selectedFieldType, 'width').value || 40)}px`;
-                field.style.height = `${toPxY(inputFor(selectedFieldType, 'height').value || 12)}px`;
+                const stage = pageStage(inputFor(selectedFieldType, 'page').value);
+                if (!stage) return;
+                const field = ensureFieldVisible(selectedFieldType, stage);
+                field.style.left = `${(Number(inputFor(selectedFieldType, 'x').value || 0) / mmPage.width) * 100}%`;
+                field.style.top = `${(Number(inputFor(selectedFieldType, 'y').value || 0) / mmPage.height) * 100}%`;
+                field.style.width = `${(Number(inputFor(selectedFieldType, 'width').value || 40) / mmPage.width) * 100}%`;
+                field.style.height = `${(Number(inputFor(selectedFieldType, 'height').value || 12) / mmPage.height) * 100}%`;
                 writePlacement(selectedFieldType, field.offsetLeft, field.offsetTop);
             }
 
-            function attachFile(file) {
+            function visiblePageStage() {
+                const viewport = canvas.getBoundingClientRect();
+                return Array.from(pages.querySelectorAll('[data-pdf-page]')).reduce((closest, item) => {
+                    const rect = item.getBoundingClientRect();
+                    const distance = Math.abs(rect.top - viewport.top);
+                    return !closest || distance < closest.distance ? { item, distance } : closest;
+                }, null)?.item || pageStage(1);
+            }
+
+            async function renderPdf(source) {
+                const version = ++renderVersion;
+                const fields = ['signature', 'date'].map(fieldEl);
+                fields.forEach((field) => pdfDocument.appendChild(field));
+                pages.replaceChildren();
+                loading.textContent = 'Loading PDF…';
+                loading.classList.remove('d-none');
+                pageCount = 0;
+
+                try {
+                    if (!window.pdfjsLib) {
+                        throw new Error('PDF renderer is unavailable. Please refresh the page.');
+                    }
+
+                    const task = window.pdfjsLib.getDocument(source);
+                    const pdf = await task.promise;
+                    if (version !== renderVersion) return;
+                    pageCount = pdf.numPages;
+                    propInput('page').max = pageCount;
+
+                    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                        const page = await pdf.getPage(pageNumber);
+                        if (version !== renderVersion) return;
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+                        const stage = document.createElement('div');
+                        const pageCanvas = document.createElement('canvas');
+                        const context = pageCanvas.getContext('2d');
+
+                        stage.className = 'pdf-page-stage';
+                        stage.dataset.pdfPage = pageNumber;
+                        stage.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
+                        pageCanvas.width = Math.floor(viewport.width * outputScale);
+                        pageCanvas.height = Math.floor(viewport.height * outputScale);
+                        pageCanvas.setAttribute('aria-label', `PDF page ${pageNumber}`);
+                        stage.appendChild(pageCanvas);
+                        pages.appendChild(stage);
+
+                        await page.render({
+                            canvasContext: context,
+                            viewport,
+                            transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0],
+                        }).promise;
+                    }
+
+                    loading.classList.add('d-none');
+                    placeSavedFieldsWhenReady();
+                } catch (error) {
+                    if (version !== renderVersion) return;
+                    loading.textContent = error?.message || 'The PDF preview could not be loaded.';
+                }
+            }
+
+            async function attachFile(file) {
                 if (!file) return;
                 const transfer = new DataTransfer();
                 transfer.items.add(file);
                 fileInput.files = transfer.files;
                 clearAllFields();
-                const objectUrl = URL.createObjectURL(file);
-                frame.src = `${objectUrl}#toolbar=0&navpanes=0&view=FitH`;
                 dropzone.classList.add('d-none');
                 shell.classList.remove('d-none');
                 markDocumentAttached(docType, file.name);
                 previewFilename.textContent = file.name;
-                requestAnimationFrame(() => {
-                    syncProperties('signature');
-                });
+                await renderPdf({ data: new Uint8Array(await file.arrayBuffer()) });
             }
 
             function loadExistingDocument() {
@@ -999,10 +1104,10 @@
                     return;
                 }
 
-                frame.src = existingDocumentUrl;
                 dropzone.classList.add('d-none');
                 shell.classList.remove('d-none');
                 previewFilename.textContent = existingDocumentName || 'Current document';
+                renderPdf({ url: existingDocumentUrl.split('#')[0], withCredentials: true });
             }
 
             dropzone.addEventListener('click', () => fileInput.click());
@@ -1027,9 +1132,12 @@
 
                 tool.addEventListener('click', () => {
                     const type = tool.dataset.fieldTool;
-                    const field = ensureFieldVisible(type);
+                    const stage = visiblePageStage();
+                    if (!stage) return;
+                    propInput('page').value = stage.dataset.pdfPage;
+                    const field = ensureFieldVisible(type, stage);
                     const left = Math.max(0, (stage.clientWidth - field.offsetWidth) / 2);
-                    const top = Math.max(0, canvas.scrollTop + 80);
+                    const top = Math.max(0, Math.min(80, stage.clientHeight - field.offsetHeight));
                     field.style.left = `${Math.min(left, stage.clientWidth - field.offsetWidth)}px`;
                     field.style.top = `${Math.min(top, stage.clientHeight - field.offsetHeight)}px`;
                     writePlacement(type, field.offsetLeft, field.offsetTop);
@@ -1037,11 +1145,12 @@
             });
 
             canvas.addEventListener('dragover', (event) => event.preventDefault());
-            stage.addEventListener('dragover', (event) => event.preventDefault());
-            stage.addEventListener('drop', (event) => {
+            pages.addEventListener('drop', (event) => {
                 event.preventDefault();
+                const stage = event.target.closest('[data-pdf-page]');
+                if (!stage) return;
                 const type = event.dataTransfer.getData('text/plain') || selectedFieldType;
-                const field = ensureFieldVisible(type);
+                const field = ensureFieldVisible(type, stage);
                 const rect = stage.getBoundingClientRect();
                 const left = Math.max(0, Math.min(event.clientX - rect.left - field.offsetWidth / 2, stage.clientWidth - field.offsetWidth));
                 const top = Math.max(0, Math.min(event.clientY - rect.top - field.offsetHeight / 2, stage.clientHeight - field.offsetHeight));
@@ -1124,7 +1233,8 @@
                     const minimum = Number(input.getAttribute('min') || 0);
                     const step = key === 'page' ? 1 : 1;
                     const current = Number(input.value || minimum);
-                    const nextValue = Math.max(minimum, current + (Number(direction) * step));
+                    const maximum = key === 'page' ? pageCount || 1 : Number.POSITIVE_INFINITY;
+                    const nextValue = Math.min(maximum, Math.max(minimum, current + (Number(direction) * step)));
 
                     input.value = key === 'page' ? Math.round(nextValue) : nextValue.toFixed(1);
                     applyPropertiesToSelectedField();
@@ -1141,9 +1251,7 @@
             loadExistingDocument();
 
             modal?.addEventListener('shown.bs.modal', () => {
-                if (existingDocumentUrl) {
-                    window.requestAnimationFrame(() => placeSavedFieldsWhenReady());
-                }
+                window.requestAnimationFrame(() => placeSavedFieldsWhenReady());
             });
         });
     });

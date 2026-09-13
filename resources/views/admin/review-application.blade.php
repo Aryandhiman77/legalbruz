@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@section('head')
+    @vite('resources/js/pdf-editor.js')
+@endsection
+
 @section('content')
     @php
         $workflow = \App\Support\TrademarkWorkflow::class;

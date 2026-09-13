@@ -21,26 +21,35 @@ echo "       ADMIN ACCOUNT CREATOR\n";
 echo str_repeat("=", 60) . "\n\n";
 
 try {
-    // Check if admin already exists
-    $existingAdmin = Admin::where('email', 'admin@trademark.com')->first();
+    $credentials = [
+        'name' => 'LegalBruz Admin Anshul',
+        'email' => 'legalbruz@gmail.com',
+        'password' => 'Legalbruz@2026',
+    ];
 
-    if ($existingAdmin) {
-        echo "✅ Admin already exists!\n\n";
-        echo "Email: admin@trademark.com\n";
-        echo "Password: admin@123\n\n";
-    } else {
-        // Create new admin account
-        $admin = Admin::create([
-            'name' => 'Admin User',
-            'email' => 'admin@trademark.com',
-            'password' => Hash::make('admin@123'),
-        ]);
+    // This script manages the primary admin account. Re-running it after changing
+    // the values above will update the existing account instead of creating a
+    // duplicate admin with the new email address.
+    $admin = Admin::query()->oldest('id')->first();
+    $wasCreated = $admin === null;
 
-        echo "✅ Admin account created successfully!\n\n";
-        echo "📧 Email: admin@trademark.com\n";
-        echo "🔑 Password: admin@123\n\n";
-        echo "⚠️  IMPORTANT: Change password after first login!\n\n";
+    if ($wasCreated) {
+        $admin = new Admin();
     }
+
+    $admin->name = $credentials['name'];
+    $admin->email = $credentials['email'];
+
+    if ($wasCreated || ! Hash::check($credentials['password'], $admin->password)) {
+        $admin->password = Hash::make($credentials['password']);
+    }
+
+    $admin->save();
+
+    echo $wasCreated
+        ? "✅ Admin account created successfully!\n\n"
+        : "✅ Admin account updated successfully!\n\n";
+    echo "Email: {$admin->email}\n\n";
 
     // List all admins
     echo str_repeat("-", 60) . "\n";
