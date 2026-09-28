@@ -474,7 +474,18 @@
                         </div>
                         <hr class="mb-4">
 
-                        @if ($application->current_status === $workflow::UNDER_REVIEW)
+                        @if ($application->current_status === $workflow::APPLICATION_SUBMITTED)
+                            <div class="alert alert-info">
+                                <div class="fw-semibold mb-1">Application received and waiting for admin review.</div>
+                                <small>Start the review to unlock the approval, onboarding, and change-request actions.</small>
+                            </div>
+                            <form action="{{ route('admin.start-review', $application->id) }}" method="POST" data-swal-confirm data-swal-title="Start reviewing this application?" data-swal-text="The client will be notified that their application is under review." data-swal-icon="question" data-swal-confirm-text="Yes, start review">
+                                @csrf
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-play-circle me-2"></i>Start Admin Review
+                                </button>
+                            </form>
+                        @elseif ($application->current_status === $workflow::UNDER_REVIEW)
                             <form action="{{ route('admin.approve', $application->id) }}" method="POST" class="mb-4" enctype="multipart/form-data" data-swal-confirm data-swal-title="Approve application?" data-swal-text="This will issue the onboarding package to the applicant." data-swal-icon="question" data-swal-confirm-text="Yes, approve">
                                 @csrf
                                 <label class="form-label fw-semibold">Approval Note</label>

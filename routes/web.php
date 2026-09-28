@@ -359,6 +359,7 @@ Route::middleware(['admin'])->prefix('admin')->group(function () {
     Route::get('/application/{id}/client-action-center', [AdminController::class, 'viewClientActionCenter'])->name('admin.application.client-action-center');
 
     // Approval/Rejection
+    Route::post('/application/{id}/start-review', [AdminController::class, 'startApplicationReview'])->name('admin.start-review');
     Route::post('/application/{id}/approve', [AdminController::class, 'approveApplication'])->name('admin.approve');
     Route::post('/application/{id}/onboarding-package/resend', [AdminController::class, 'resendOnboardingPackage'])->name('admin.resend-onboarding-package');
     Route::post('/application/{id}/onboarding-package/manual-upload', [AdminController::class, 'uploadManualOnboardingPackage'])->name('admin.manual-onboarding-package');

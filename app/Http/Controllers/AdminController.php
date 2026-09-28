@@ -197,6 +197,22 @@ class AdminController extends Controller
     }
 
     /**
+     * Move a submitted application into the admin review stage.
+     */
+    public function startApplicationReview($applicationId, TrademarkWorkflowService $workflow)
+    {
+        $application = Application::findOrFail($applicationId);
+
+        if ($application->current_status !== TrademarkWorkflow::APPLICATION_SUBMITTED) {
+            return redirect()->back()->with('error', 'Only a submitted application can be moved into admin review.');
+        }
+
+        $workflow->startAdminReview($application);
+
+        return redirect()->back()->with('success', 'Admin review started. You can now review, approve, or request changes for this application.');
+    }
+
+    /**
      * Approve application
      */
     public function approveApplication(Request $request, $applicationId, TrademarkWorkflowService $workflow)

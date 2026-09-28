@@ -53,6 +53,17 @@ class TrademarkWorkflowService
         );
     }
 
+    public function startAdminReview(Application $application): void
+    {
+        $this->transition($application, TrademarkWorkflow::UNDER_REVIEW, 'Admin started reviewing the trademark application.');
+        $this->notifyUser(
+            $application,
+            'under_review',
+            'Application under review',
+            'Our team has started reviewing your trademark application. We will notify you when the next action is available.'
+        );
+    }
+
     public function rejectReview(Application $application, ?string $reason = null): void
     {
         $this->transition($application, TrademarkWorkflow::REJECTED, $reason ?: 'Application rejected.');
