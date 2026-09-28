@@ -460,6 +460,20 @@
                         <h5 class="mb-0">Stage Actions</h5>
                     </div>
                     <div class="card-body">
+                        <div class="client-preview-actions mb-4">
+                            <div class="small text-muted fw-semibold text-uppercase mb-2">Client view</div>
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('admin.application.client-dashboard', $application->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener">
+                                    <i class="bi bi-grid me-2"></i>View Client Dashboard
+                                </a>
+                                <a href="{{ route('admin.application.client-action-center', ['id' => $application->id, 'stage_action' => 1]) }}#stage-action" class="btn btn-outline-primary" target="_blank" rel="noopener">
+                                    <i class="bi bi-eye me-2"></i>View Client Action Center
+                                </a>
+                            </div>
+                            <div class="form-text mt-2">Read-only preview. Client data and workflow status cannot be changed here.</div>
+                        </div>
+                        <hr class="mb-4">
+
                         @if ($application->current_status === $workflow::UNDER_REVIEW)
                             <form action="{{ route('admin.approve', $application->id) }}" method="POST" class="mb-4" enctype="multipart/form-data" data-swal-confirm data-swal-title="Approve application?" data-swal-text="This will issue the onboarding package to the applicant." data-swal-icon="question" data-swal-confirm-text="Yes, approve">
                                 @csrf

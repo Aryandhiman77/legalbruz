@@ -355,6 +355,8 @@ Route::middleware(['admin'])->prefix('admin')->group(function () {
     Route::get('/applications/all', [AdminController::class, 'listAllApplications'])->name('admin.all-applications');
     Route::get('/application/{id}', [AdminController::class, 'viewApplication'])->name('admin.view-application');
     Route::get('/application/{id}/review', [AdminController::class, 'viewApplication'])->name('admin.review-application');
+    Route::get('/application/{id}/client-dashboard', [AdminController::class, 'viewClientDashboard'])->name('admin.application.client-dashboard');
+    Route::get('/application/{id}/client-action-center', [AdminController::class, 'viewClientActionCenter'])->name('admin.application.client-action-center');
 
     // Approval/Rejection
     Route::post('/application/{id}/approve', [AdminController::class, 'approveApplication'])->name('admin.approve');

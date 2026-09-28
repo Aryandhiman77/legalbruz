@@ -1,7 +1,30 @@
 @extends('layouts.app')
 
+@section('body_class', !empty($adminPreview) ? 'admin-client-preview' : '')
+
 @section('content')
-    @php $workflow = \App\Support\TrademarkWorkflow::class; @endphp
+    @php
+        $workflow = \App\Support\TrademarkWorkflow::class;
+        $isAdminPreview = !empty($adminPreview);
+        $dashboardUser = $client ?? Auth::user();
+        $trademarkStatusUrl = function ($clientApplication, bool $stageAction = false) use ($isAdminPreview) {
+            if ($isAdminPreview) {
+                return route('admin.application.client-action-center', array_filter([
+                    'id' => $clientApplication->id,
+                    'stage_action' => $stageAction ? 1 : null,
+                ]));
+            }
+
+            return route('trademark.status', array_filter([
+                'id' => $clientApplication->id,
+                'stage_action' => $stageAction ? 1 : null,
+            ]));
+        };
+        $trademarkImageUrl = fn ($clientApplication) => route(
+            $isAdminPreview ? 'admin.trademark.image.view' : 'trademark.image.view',
+            $clientApplication->id
+        );
+    @endphp
     <style>
         .dashboard-shell {
             color: #111827;
@@ -831,10 +854,22 @@
         }
     </style>
     <div class="container-fluid mt-4 dashboard-shell">
+        @if ($isAdminPreview)
+            <div class="alert alert-warning d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4" role="status">
+                <div>
+                    <div class="fw-bold"><i class="bi bi-eye me-2"></i>Read-only client preview</div>
+                    <div class="small">You are viewing the dashboard shown to {{ $dashboardUser->name }} ({{ $dashboardUser->email }}). No client data can be changed from this page.</div>
+                </div>
+                <a href="{{ route('admin.view-application', $previewApplication->id) }}" class="btn btn-sm btn-outline-dark flex-shrink-0" data-admin-preview-link>
+                    <i class="bi bi-arrow-left me-1"></i>Back to Admin Application
+                </a>
+            </div>
+        @endif
+
         <!-- Dashboard Header -->
         <div class="row mb-4">
             <div class="col-md-12">
-                <h2>Welcome, {{ Auth::user()->name }}!</h2>
+                <h2>Welcome, {{ $dashboardUser->name }}!</h2>
                 <p class="text-muted">Your Trademark Applications Dashboard</p>
             </div>
         </div>
@@ -1494,7 +1529,7 @@
                                                     <div class="dashboard-trademark-cell">
                                                         @if ($trademarkImagePath)
                                                             <span class="dashboard-logo-frame">
-                                                                <img src="{{ route('trademark.image.view', $app->id) }}" alt="{{ $app->brand_name }} trademark logo">
+                                                                <img src="{{ $trademarkImageUrl($app) }}" alt="{{ $app->brand_name }} trademark logo">
                                                             </span>
                                                         @endif
                                                         <span>
@@ -1559,17 +1594,17 @@
                                                                 <i class="fas fa-credit-card"></i> Pay
                                                             </a>
                                                         @elseif($app->current_status === $workflow::APPLICATION_SUBMITTED)
-                                                            <a href="{{ route('trademark.status', $app->id) }}"
+                                                            <a href="{{ $trademarkStatusUrl($app) }}"
                                                                 class="dashboard-action-btn btn-view" title="Track Application">
                                                                 <i class="fas fa-eye"></i> Track Application
                                                             </a>
                                                         @elseif($app->current_status === $workflow::ONBOARDING_PENDING)
-                                                            <a href="{{ route('trademark.status', ['id' => $app->id, 'stage_action' => 1]) }}#stage-action"
+                                                            <a href="{{ $trademarkStatusUrl($app, true) }}#stage-action"
                                                                 class="dashboard-action-btn btn-onboarding" title="Submit Signatures">
                                                                 <i class="fas fa-rocket"></i> Onboarding
                                                             </a>
                                                         @elseif($app->current_status === $workflow::AWAITING_APPROVAL)
-                                                            <a href="{{ route('trademark.status', ['id' => $app->id, 'stage_action' => 1]) }}#stage-action"
+                                                            <a href="{{ $trademarkStatusUrl($app, true) }}#stage-action"
                                                                 class="dashboard-action-btn btn-successish" title="Review Draft">
                                                                 <i class="fas fa-check-circle"></i> Client Approval
                                                             </a>
@@ -1579,7 +1614,7 @@
                                                                 <i class="fas fa-credit-card"></i> Final Pay
                                                             </a>
                                                         @endif
-                                                        <a href="{{ route('trademark.status', $app->id) }}"
+                                                        <a href="{{ $trademarkStatusUrl($app) }}"
                                                             class="dashboard-action-btn btn-view" title="Track Application">
                                                             <i class="fas fa-eye"></i> Track Application
                                                         </a>
@@ -1625,7 +1660,7 @@
                                         $paymentStateClass = $hasFinalPayment || $hasAdvancePayment
                                             ? 'is-success'
                                             : ($rejectedPayment ? 'is-danger' : 'is-warning');
-                                        $primaryActionUrl = route('trademark.status', $app->id);
+                                        $primaryActionUrl = $trademarkStatusUrl($app);
                                         $primaryActionLabel = 'Track Application';
                                         $primaryActionIcon = 'fa-eye';
 
@@ -1634,11 +1669,11 @@
                                             $primaryActionLabel = 'Pay';
                                             $primaryActionIcon = 'fa-credit-card';
                                         } elseif ($app->current_status === $workflow::ONBOARDING_PENDING) {
-                                            $primaryActionUrl = route('trademark.status', ['id' => $app->id, 'stage_action' => 1]) . '#stage-action';
+                                            $primaryActionUrl = $trademarkStatusUrl($app, true) . '#stage-action';
                                             $primaryActionLabel = 'Onboarding';
                                             $primaryActionIcon = 'fa-rocket';
                                         } elseif ($app->current_status === $workflow::AWAITING_APPROVAL) {
-                                            $primaryActionUrl = route('trademark.status', ['id' => $app->id, 'stage_action' => 1]) . '#stage-action';
+                                            $primaryActionUrl = $trademarkStatusUrl($app, true) . '#stage-action';
                                             $primaryActionLabel = 'Review Draft';
                                             $primaryActionIcon = 'fa-check-circle';
                                         } elseif ($app->current_status === $workflow::PAYMENT_PENDING_FINAL) {
@@ -1652,7 +1687,7 @@
                                             <div class="dashboard-application-title">
                                                 @if ($trademarkImagePath)
                                                     <span class="dashboard-logo-frame">
-                                                        <img src="{{ route('trademark.image.view', $app->id) }}" alt="{{ $app->brand_name }} trademark logo">
+                                                        <img src="{{ $trademarkImageUrl($app) }}" alt="{{ $app->brand_name }} trademark logo">
                                                     </span>
                                                 @endif
                                                 <div class="dashboard-mobile-card-main">
@@ -1712,4 +1747,37 @@
             </div>
         </div>
     </div>
+
+    @if ($isAdminPreview)
+        <style>
+            .admin-client-dashboard-preview-disabled {
+                cursor: not-allowed !important;
+                filter: grayscale(.45);
+                opacity: .58;
+            }
+        </style>
+        <script>
+            (() => {
+                const root = document.querySelector('.dashboard-shell');
+                if (!root) return;
+
+                root.querySelectorAll('a').forEach((link) => {
+                    const target = new URL(link.href, window.location.origin);
+                    const isPreviewNavigation = link.hasAttribute('data-admin-preview-link')
+                        || target.pathname.includes('/client-action-center');
+
+                    if (isPreviewNavigation) return;
+
+                    link.classList.add('admin-client-dashboard-preview-disabled');
+                    link.setAttribute('aria-disabled', 'true');
+                    link.removeAttribute('target');
+                    link.addEventListener('click', (event) => event.preventDefault());
+                });
+
+                root.querySelectorAll('form').forEach((form) => {
+                    form.addEventListener('submit', (event) => event.preventDefault(), true);
+                });
+            })();
+        </script>
+    @endif
 @endsection

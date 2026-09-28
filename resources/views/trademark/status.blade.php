@@ -1,8 +1,17 @@
 @extends('layouts.app')
 
+@section('body_class', !empty($adminPreview) ? 'admin-client-preview' : '')
+
 @section('content')
     @php
         $workflow = \App\Support\TrademarkWorkflow::class;
+        $isAdminPreview = !empty($adminPreview);
+        $client = $client ?? $application->user;
+        $documentViewRoute = $isAdminPreview ? 'admin.document.view' : 'user.document.view';
+        $documentDownloadRoute = $isAdminPreview ? 'admin.document.download' : 'user.document.download';
+        $trademarkImageViewRoute = $isAdminPreview ? 'admin.trademark.image.view' : 'trademark.image.view';
+        $trademarkProofOfUseViewRoute = $isAdminPreview ? 'admin.trademark.proof-of-use.view' : 'trademark.proof-of-use.view';
+        $clientActionUrl = fn (string $routeName, $parameters = []) => $isAdminPreview ? '#' : route($routeName, $parameters);
         $currentStatus = $application->current_status;
         $stageActionOnly = request()->boolean('stage_action');
         $displayTimezone = 'Asia/Kolkata';
@@ -525,6 +534,22 @@
     @endphp
 
     <div class="container py-3 status-page">
+        @if ($isAdminPreview)
+            <div class="alert alert-warning d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 admin-preview-banner" role="status">
+                <div>
+                    <div class="fw-bold"><i class="bi bi-eye me-2"></i>Read-only client action center</div>
+                    <div class="small">This is the current view for {{ $client->name }} ({{ $client->email }}). Inputs and client actions are disabled, so this preview cannot change application data.</div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('admin.application.client-dashboard', $application->id) }}" class="btn btn-sm btn-outline-dark" data-admin-preview-link>
+                        <i class="bi bi-grid me-1"></i>Client Dashboard
+                    </a>
+                    <a href="{{ route('admin.view-application', $application->id) }}" class="btn btn-sm btn-outline-dark" data-admin-preview-link>
+                        <i class="bi bi-arrow-left me-1"></i>Admin Application
+                    </a>
+                </div>
+            </div>
+        @endif
         @unless ($hasActionAvailable || $postFilingIsFullyCompleted)
             <div class="stage-no-action-notice">
                 <span><i class="bi bi-info-circle"></i></span>
@@ -605,7 +630,7 @@
                                                         </button>
                                                     @endif
                                                     @if ($status === $workflow::STRATEGY_IN_PROGRESS && $searchReportDocument)
-                                                        <a href="{{ route('user.document.view', $searchReportDocument->id) }}" target="_blank" class="timeline-documents-link">
+                                                        <a href="{{ route($documentViewRoute, $searchReportDocument->id) }}" target="_blank" class="timeline-documents-link">
                                                             View search report
                                                         </a>
                                                     @endif
@@ -721,7 +746,7 @@
                                                                                                             @endif
                                                                                                         </small>
                                                                                                     </div>
-                                                                                                    <a href="{{ route('user.document.view', $postStageDocument->id) }}" target="_blank">
+                                                                                                    <a href="{{ route($documentViewRoute, $postStageDocument->id) }}" target="_blank">
                                                                                                         <i class="bi bi-eye"></i> View
                                                                                                     </a>
                                                                                                 </div>
@@ -744,7 +769,7 @@
                                                                                                             @endif
                                                                                                         </small>
                                                                                                     </div>
-                                                                                                    <a href="{{ route('user.document.view', $postStageDocument->id) }}" target="_blank">
+                                                                                                    <a href="{{ route($documentViewRoute, $postStageDocument->id) }}" target="_blank">
                                                                                                         <i class="bi bi-eye"></i> View
                                                                                                     </a>
                                                                                                 </div>
@@ -839,7 +864,7 @@
                                         </div>
                                     @endif
 
-                                    <form id="onboardingPackageForm" action="{{ route('workflow.onboarding.submit', $application->id) }}" method="POST" enctype="multipart/form-data" data-swal-confirm data-swal-title="Submit onboarding package?" data-swal-text="Please confirm that you have reviewed the documents and applied the required signatures." data-swal-icon="question" data-swal-confirm-text="Yes, submit">
+                                    <form id="onboardingPackageForm" action="{{ $clientActionUrl('workflow.onboarding.submit', $application->id) }}" method="POST" enctype="multipart/form-data" data-swal-confirm data-swal-title="Submit onboarding package?" data-swal-text="Please confirm that you have reviewed the documents and applied the required signatures." data-swal-icon="question" data-swal-confirm-text="Yes, submit">
                                         @csrf
                                         <section class="onboarding-section-card onboarding-upload-section">
                                             <div class="onboarding-section-heading">
@@ -869,11 +894,11 @@
                                             <div class="engagement-signature-footer">
                                                 <div class="engagement-signature-actions">
                                                     @if ($engagementLetter)
-                                                        <a href="{{ route('user.document.view', $engagementLetter->id) }}" target="_blank" class="signature-outline-action">
+                                                        <a href="{{ route($documentViewRoute, $engagementLetter->id) }}" target="_blank" class="signature-outline-action">
                                                             <i class="bi bi-eye"></i> View
                                                         </a>
                                                     @endif
-                                                    <button type="button" class="signature-modal-trigger {{ $engagementLetterSigned && !$engagementNeedsReupload ? 'd-none' : '' }}" data-signature-open-for="engagement-signature-{{ $application->id }}" data-bs-toggle="modal" data-bs-target="#engagementSignatureModal" data-preview-document-url="{{ $engagementLetter ? route('user.document.view', $engagementLetter->id) : '' }}" data-preview-document-name="{{ $engagementLetter?->file_name }}" data-preview-open-url="{{ $engagementLetter ? route('user.document.view', $engagementLetter->id) : '' }}">
+                                                    <button type="button" class="signature-modal-trigger {{ $engagementLetterSigned && !$engagementNeedsReupload ? 'd-none' : '' }}" data-signature-open-for="engagement-signature-{{ $application->id }}" data-bs-toggle="modal" data-bs-target="#engagementSignatureModal" data-preview-document-url="{{ $engagementLetter ? route($documentViewRoute, $engagementLetter->id) : '' }}" data-preview-document-name="{{ $engagementLetter?->file_name }}" data-preview-open-url="{{ $engagementLetter ? route($documentViewRoute, $engagementLetter->id) : '' }}">
                                                         <i class="bi bi-pencil"></i> E-Sign
                                                     </button>
                                                 </div>
@@ -881,13 +906,13 @@
                                             <div class="signed-document-actions {{ $engagementLetterSigned && !$engagementNeedsReupload ? '' : 'd-none' }}" data-signed-actions-for="engagement-signature-{{ $application->id }}">
                                                 <span><i class="bi bi-check-circle-fill"></i> Signed Engagement Letter is ready.</span>
                                                 <div class="signed-document-action-row">
-                                                    <a id="engagement-signed-view-{{ $application->id }}" href="{{ $engagementLetterSigned ? route('user.document.view', $engagementLetterSigned->id) : '#' }}" target="_blank">
+                                                    <a id="engagement-signed-view-{{ $application->id }}" href="{{ $engagementLetterSigned ? route($documentViewRoute, $engagementLetterSigned->id) : '#' }}" target="_blank">
                                                         <i class="bi bi-eye"></i> View Signed Letter
                                                     </a>
-                                                    <a id="engagement-signed-download-{{ $application->id }}" href="{{ $engagementLetterSigned ? route('user.document.download', $engagementLetterSigned->id) : '#' }}">
+                                                    <a id="engagement-signed-download-{{ $application->id }}" href="{{ $engagementLetterSigned ? route($documentDownloadRoute, $engagementLetterSigned->id) : '#' }}">
                                                         <i class="bi bi-download"></i> Download
                                                     </a>
-                                                    <button type="button" class="signed-document-resign" data-bs-toggle="modal" data-bs-target="#engagementSignatureModal" data-preview-document-url="{{ $engagementLetterSigned ? route('user.document.view', $engagementLetterSigned->id) : ($engagementLetter ? route('user.document.view', $engagementLetter->id) : '') }}" data-preview-document-name="{{ $engagementLetterSigned?->file_name ?: $engagementLetter?->file_name }}" data-preview-open-url="{{ $engagementLetterSigned ? route('user.document.view', $engagementLetterSigned->id) : ($engagementLetter ? route('user.document.view', $engagementLetter->id) : '') }}">
+                                                    <button type="button" class="signed-document-resign" data-bs-toggle="modal" data-bs-target="#engagementSignatureModal" data-preview-document-url="{{ $engagementLetterSigned ? route($documentViewRoute, $engagementLetterSigned->id) : ($engagementLetter ? route($documentViewRoute, $engagementLetter->id) : '') }}" data-preview-document-name="{{ $engagementLetterSigned?->file_name ?: $engagementLetter?->file_name }}" data-preview-open-url="{{ $engagementLetterSigned ? route($documentViewRoute, $engagementLetterSigned->id) : ($engagementLetter ? route($documentViewRoute, $engagementLetter->id) : '') }}">
                                                         <i class="bi bi-arrow-repeat"></i> Re-sign
                                                     </button>
                                                 </div>
@@ -911,7 +936,7 @@
                                                                             <span data-signature-doc-name>{{ $engagementLetter ? $engagementLetter->file_name : 'Awaiting document' }}</span>
                                                                         </div>
                                                                         @if ($engagementLetter)
-                                                                            <a href="{{ route('user.document.view', $engagementLetter->id) }}" target="_blank" data-signature-doc-open-link>
+                                                                            <a href="{{ route($documentViewRoute, $engagementLetter->id) }}" target="_blank" data-signature-doc-open-link>
                                                                                 <i class="bi bi-box-arrow-up-right"></i> Open
                                                                             </a>
                                                                         @endif
@@ -921,7 +946,7 @@
                                                                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                                             Loading document...
                                                                         </div>
-                                                                        <iframe data-signature-doc-frame data-src="{{ route('user.document.view', $engagementLetter->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" data-original-src="{{ route('user.document.view', $engagementLetter->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" title="Engagement Letter preview"></iframe>
+                                                                        <iframe data-signature-doc-frame data-src="{{ route($documentViewRoute, $engagementLetter->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" data-original-src="{{ route($documentViewRoute, $engagementLetter->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" title="Engagement Letter preview"></iframe>
                                                                     @else
                                                                         <div class="signature-document-empty">
                                                                             <i class="bi bi-file-earmark-lock"></i>
@@ -941,10 +966,10 @@
                                                                     @include('trademark.partials.signature-pad', [
                                                                         'id' => 'engagement-signature-' . $application->id,
                                                                         'label' => '',
-                                                                        'defaultName' => auth()->user()->name,
+                                                                        'defaultName' => $client->name,
                                                                         'namePrefix' => 'engagement',
                                                                         'theme' => 'blue',
-                                                                        'signUrl' => route('workflow.onboarding.apply-signature', [$application->id, 'engagement_letter']),
+                                                                        'signUrl' => $clientActionUrl('workflow.onboarding.apply-signature', [$application->id, 'engagement_letter']),
                                                                         'signedViewTarget' => 'engagement-signed-view-' . $application->id,
                                                                         'signedDownloadTarget' => 'engagement-signed-download-' . $application->id,
                                                                         'formId' => 'onboardingPackageForm',
@@ -992,11 +1017,11 @@
                                                 <div class="signed-document-actions">
                                                     <span data-signed-document-status><i class="bi bi-check-circle-fill"></i> Signed POA has been {{ $poaSigned->status === 'draft' ? 'attached' : 'uploaded' }}.</span>
                                                     <div class="signed-document-action-row">
-                                                        <a href="{{ route('user.document.view', $poaSigned->id) }}" target="_blank" data-signed-view-link><i class="bi bi-eye"></i> View Signed POA</a>
-                                                        <a href="{{ route('user.document.download', $poaSigned->id) }}" data-signed-download-link><i class="bi bi-download"></i> Download</a>
+                                                        <a href="{{ route($documentViewRoute, $poaSigned->id) }}" target="_blank" data-signed-view-link><i class="bi bi-eye"></i> View Signed POA</a>
+                                                        <a href="{{ route($documentDownloadRoute, $poaSigned->id) }}" data-signed-download-link><i class="bi bi-download"></i> Download</a>
                                                         <label class="signed-document-resign" for="poa-signed-reupload-{{ $application->id }}">
                                                             <span data-reupload-action-label><i class="bi bi-arrow-repeat"></i> Re-upload</span>
-                                                            <input id="poa-signed-reupload-{{ $application->id }}" type="file" name="poa_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ route('workflow.onboarding.draft-upload', [$application->id, 'poa']) }}">
+                                                            <input id="poa-signed-reupload-{{ $application->id }}" type="file" name="poa_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ $clientActionUrl('workflow.onboarding.draft-upload', [$application->id, 'poa']) }}">
                                                         </label>
                                                     </div>
                                                 </div>
@@ -1013,10 +1038,10 @@
                                                         <div class="physical-upload-actions">
                                                             <span class="physical-upload-choose">Choose File</span>
                                                         </div>
-                                                        <input id="poa-signed-file-{{ $application->id }}" type="file" name="poa_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ route('workflow.onboarding.draft-upload', [$application->id, 'poa']) }}" required>
+                                                        <input id="poa-signed-file-{{ $application->id }}" type="file" name="poa_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ $clientActionUrl('workflow.onboarding.draft-upload', [$application->id, 'poa']) }}" required>
                                                     </label>
                                                     @if ($poaDocument)
-                                                        <a href="{{ route('user.document.view', $poaDocument->id) }}" target="_blank" class="signature-outline-action physical-upload-view">
+                                                        <a href="{{ route($documentViewRoute, $poaDocument->id) }}" target="_blank" class="signature-outline-action physical-upload-view">
                                                             <i class="bi bi-eye"></i> View
                                                         </a>
                                                     @endif
@@ -1052,11 +1077,11 @@
                                                 <div class="signed-document-actions">
                                                     <span data-signed-document-status><i class="bi bi-check-circle-fill"></i> Signed Affidavit has been {{ $affidavitSigned->status === 'draft' ? 'attached' : 'uploaded' }}.</span>
                                                     <div class="signed-document-action-row">
-                                                        <a href="{{ route('user.document.view', $affidavitSigned->id) }}" target="_blank" data-signed-view-link><i class="bi bi-eye"></i> View Signed Affidavit</a>
-                                                        <a href="{{ route('user.document.download', $affidavitSigned->id) }}" data-signed-download-link><i class="bi bi-download"></i> Download</a>
+                                                        <a href="{{ route($documentViewRoute, $affidavitSigned->id) }}" target="_blank" data-signed-view-link><i class="bi bi-eye"></i> View Signed Affidavit</a>
+                                                        <a href="{{ route($documentDownloadRoute, $affidavitSigned->id) }}" data-signed-download-link><i class="bi bi-download"></i> Download</a>
                                                         <label class="signed-document-resign" for="affidavit-signed-reupload-{{ $application->id }}">
                                                             <span data-reupload-action-label><i class="bi bi-arrow-repeat"></i> Re-upload</span>
-                                                            <input id="affidavit-signed-reupload-{{ $application->id }}" type="file" name="affidavit_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ route('workflow.onboarding.draft-upload', [$application->id, 'affidavit']) }}">
+                                                            <input id="affidavit-signed-reupload-{{ $application->id }}" type="file" name="affidavit_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ $clientActionUrl('workflow.onboarding.draft-upload', [$application->id, 'affidavit']) }}">
                                                         </label>
                                                     </div>
                                                 </div>
@@ -1073,10 +1098,10 @@
                                                         <div class="physical-upload-actions">
                                                             <span class="physical-upload-choose">Choose File</span>
                                                         </div>
-                                                        <input id="affidavit-signed-file-{{ $application->id }}" type="file" name="affidavit_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ route('workflow.onboarding.draft-upload', [$application->id, 'affidavit']) }}" required>
+                                                        <input id="affidavit-signed-file-{{ $application->id }}" type="file" name="affidavit_signed_file" class="physical-upload-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-draft-upload-url="{{ $clientActionUrl('workflow.onboarding.draft-upload', [$application->id, 'affidavit']) }}" required>
                                                     </label>
                                                     @if ($affidavitDocument)
-                                                        <a href="{{ route('user.document.view', $affidavitDocument->id) }}" target="_blank" class="signature-outline-action physical-upload-view">
+                                                        <a href="{{ route($documentViewRoute, $affidavitDocument->id) }}" target="_blank" class="signature-outline-action physical-upload-view">
                                                             <i class="bi bi-eye"></i> View
                                                         </a>
                                                     @endif
@@ -1109,10 +1134,10 @@
                                             @endif
                                             <div class="signed-document-actions {{ $poaSigned && !$poaNeedsReupload ? '' : 'd-none' }}" data-signed-actions-for="poa-signature-{{ $application->id }}">
                                                 <span><i class="bi bi-check-circle-fill"></i> Signed POA is ready.</span>
-                                                <a id="poa-signed-view-{{ $application->id }}" href="{{ $poaSigned ? route('user.document.view', $poaSigned->id) : '#' }}" target="_blank">
+                                                <a id="poa-signed-view-{{ $application->id }}" href="{{ $poaSigned ? route($documentViewRoute, $poaSigned->id) : '#' }}" target="_blank">
                                                     <i class="bi bi-eye"></i> View Signed POA
                                                 </a>
-                                                <a id="poa-signed-download-{{ $application->id }}" href="{{ $poaSigned ? route('user.document.download', $poaSigned->id) : '#' }}">
+                                                <a id="poa-signed-download-{{ $application->id }}" href="{{ $poaSigned ? route($documentDownloadRoute, $poaSigned->id) : '#' }}">
                                                     <i class="bi bi-download"></i> Download
                                                 </a>
                                                 <button type="button" class="signed-document-resign" data-bs-toggle="modal" data-bs-target="#poaSignatureModal">
@@ -1138,7 +1163,7 @@
                                                                             <span>{{ $poaDocument ? $poaDocument->file_name : 'Awaiting document' }}</span>
                                                                         </div>
                                                                         @if ($poaDocument)
-                                                                            <a href="{{ route('user.document.view', $poaDocument->id) }}" target="_blank">
+                                                                            <a href="{{ route($documentViewRoute, $poaDocument->id) }}" target="_blank">
                                                                                 <i class="bi bi-box-arrow-up-right"></i> Open
                                                                             </a>
                                                                         @endif
@@ -1148,7 +1173,7 @@
                                                                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                                             Loading document...
                                                                         </div>
-                                                                        <iframe data-signature-doc-frame data-src="{{ route('user.document.view', $poaDocument->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" title="POA preview"></iframe>
+                                                                        <iframe data-signature-doc-frame data-src="{{ route($documentViewRoute, $poaDocument->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" title="POA preview"></iframe>
                                                                     @else
                                                                         <div class="signature-document-empty">
                                                                             <i class="bi bi-file-earmark-lock"></i>
@@ -1168,10 +1193,10 @@
                                                                     @include('trademark.partials.signature-pad', [
                                                                         'id' => 'poa-signature-' . $application->id,
                                                                         'label' => '',
-                                                                        'defaultName' => auth()->user()->name,
+                                                                        'defaultName' => $client->name,
                                                                         'namePrefix' => 'poa',
                                                                         'theme' => 'green',
-                                                                        'signUrl' => route('workflow.onboarding.apply-signature', [$application->id, 'poa']),
+                                                                        'signUrl' => $clientActionUrl('workflow.onboarding.apply-signature', [$application->id, 'poa']),
                                                                         'signedViewTarget' => 'poa-signed-view-' . $application->id,
                                                                         'signedDownloadTarget' => 'poa-signed-download-' . $application->id,
                                                                         'formId' => 'onboardingPackageForm',
@@ -1216,10 +1241,10 @@
                                             @endif
                                             <div class="signed-document-actions {{ $affidavitSigned && !$affidavitNeedsReupload ? '' : 'd-none' }}" data-signed-actions-for="affidavit-signature-{{ $application->id }}">
                                                 <span><i class="bi bi-check-circle-fill"></i> Signed Affidavit is ready.</span>
-                                                <a id="affidavit-signed-view-{{ $application->id }}" href="{{ $affidavitSigned ? route('user.document.view', $affidavitSigned->id) : '#' }}" target="_blank">
+                                                <a id="affidavit-signed-view-{{ $application->id }}" href="{{ $affidavitSigned ? route($documentViewRoute, $affidavitSigned->id) : '#' }}" target="_blank">
                                                     <i class="bi bi-eye"></i> View Signed Affidavit
                                                 </a>
-                                                <a id="affidavit-signed-download-{{ $application->id }}" href="{{ $affidavitSigned ? route('user.document.download', $affidavitSigned->id) : '#' }}">
+                                                <a id="affidavit-signed-download-{{ $application->id }}" href="{{ $affidavitSigned ? route($documentDownloadRoute, $affidavitSigned->id) : '#' }}">
                                                     <i class="bi bi-download"></i> Download
                                                 </a>
                                                 <button type="button" class="signed-document-resign" data-bs-toggle="modal" data-bs-target="#affidavitSignatureModal">
@@ -1245,7 +1270,7 @@
                                                                             <span>{{ $affidavitDocument ? $affidavitDocument->file_name : 'Awaiting document' }}</span>
                                                                         </div>
                                                                         @if ($affidavitDocument)
-                                                                            <a href="{{ route('user.document.view', $affidavitDocument->id) }}" target="_blank">
+                                                                            <a href="{{ route($documentViewRoute, $affidavitDocument->id) }}" target="_blank">
                                                                                 <i class="bi bi-box-arrow-up-right"></i> Open
                                                                             </a>
                                                                         @endif
@@ -1255,7 +1280,7 @@
                                                                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                                             Loading document...
                                                                         </div>
-                                                                        <iframe data-signature-doc-frame data-src="{{ route('user.document.view', $affidavitDocument->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" title="Affidavit preview"></iframe>
+                                                                        <iframe data-signature-doc-frame data-src="{{ route($documentViewRoute, $affidavitDocument->id) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" title="Affidavit preview"></iframe>
                                                                     @else
                                                                         <div class="signature-document-empty">
                                                                             <i class="bi bi-file-earmark-lock"></i>
@@ -1275,10 +1300,10 @@
                                                                     @include('trademark.partials.signature-pad', [
                                                                         'id' => 'affidavit-signature-' . $application->id,
                                                                         'label' => '',
-                                                                        'defaultName' => auth()->user()->name,
+                                                                        'defaultName' => $client->name,
                                                                         'namePrefix' => 'affidavit',
                                                                         'theme' => 'blue',
-                                                                        'signUrl' => route('workflow.onboarding.apply-signature', [$application->id, 'affidavit']),
+                                                                        'signUrl' => $clientActionUrl('workflow.onboarding.apply-signature', [$application->id, 'affidavit']),
                                                                         'signedViewTarget' => 'affidavit-signed-view-' . $application->id,
                                                                         'signedDownloadTarget' => 'affidavit-signed-download-' . $application->id,
                                                                         'formId' => 'onboardingPackageForm',
@@ -1344,8 +1369,8 @@
                                             <div class="small text-muted">A manual search report has been shared with you.</div>
                                         </div>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('user.document.view', $searchReportDocument->id) }}" target="_blank" class="btn btn-outline-primary">View Search Report</a>
-                                            <a href="{{ route('user.document.download', $searchReportDocument->id) }}" class="btn btn-outline-success">Download Search Report</a>
+                                            <a href="{{ route($documentViewRoute, $searchReportDocument->id) }}" target="_blank" class="btn btn-outline-primary">View Search Report</a>
+                                            <a href="{{ route($documentDownloadRoute, $searchReportDocument->id) }}" class="btn btn-outline-success">Download Search Report</a>
                                         </div>
                                     </div>
                                 </div>
@@ -1374,11 +1399,11 @@
 
                                     @if ($draftDocument)
                                         <div class="draft-document-actions draft-compact-actions">
-                                            <a href="{{ route('user.document.view', $draftDocument->id) }}" target="_blank" class="draft-action-btn draft-action-primary">
+                                            <a href="{{ route($documentViewRoute, $draftDocument->id) }}" target="_blank" class="draft-action-btn draft-action-primary">
                                                 <i class="bi bi-eye"></i>
                                                 View Draft
                                             </a>
-                                            <a href="{{ route('user.document.download', $draftDocument->id) }}" class="draft-action-btn draft-action-secondary">
+                                            <a href="{{ route($documentDownloadRoute, $draftDocument->id) }}" class="draft-action-btn draft-action-secondary">
                                                 <i class="bi bi-download"></i>
                                                 Download PDF
                                             </a>
@@ -1424,7 +1449,7 @@
                                     <div class="modal fade draft-review-modal" id="requestDraftChangesModal" tabindex="-1" aria-labelledby="requestDraftChangesModalLabel" aria-hidden="true">
                                         <div class="modal-dialog modal-lg modal-dialog-centered">
                                             <div class="modal-content draft-action-modal">
-                                                <form action="{{ route('workflow.draft.request-changes', $application->id) }}" method="POST" data-swal-confirm data-swal-title="Request draft changes?" data-swal-text="Your comments will be sent to the drafting team for review." data-swal-icon="warning" data-swal-confirm-text="Yes, request changes">
+                                                <form action="{{ $clientActionUrl('workflow.draft.request-changes', $application->id) }}" method="POST" data-swal-confirm data-swal-title="Request draft changes?" data-swal-text="Your comments will be sent to the drafting team for review." data-swal-icon="warning" data-swal-confirm-text="Yes, request changes">
                                                     @csrf
                                                     <div class="modal-header">
                                                         <div class="draft-section-heading mb-0">
@@ -1459,7 +1484,7 @@
                                     <div class="modal fade draft-review-modal" id="approveDraftModal" tabindex="-1" aria-labelledby="approveDraftModalLabel" aria-hidden="true">
                                         <div class="modal-dialog modal-lg modal-dialog-centered">
                                             <div class="modal-content draft-action-modal">
-                                                <form id="draftApprovalForm" action="{{ route('workflow.draft.approve', $application->id) }}" method="POST" data-swal-confirm data-swal-title="Approve draft?" data-swal-text="By continuing, you confirm that you reviewed the draft and approve it for filing." data-swal-icon="question" data-swal-confirm-text="Yes, approve draft">
+                                                <form id="draftApprovalForm" action="{{ $clientActionUrl('workflow.draft.approve', $application->id) }}" method="POST" data-swal-confirm data-swal-title="Approve draft?" data-swal-text="By continuing, you confirm that you reviewed the draft and approve it for filing." data-swal-icon="question" data-swal-confirm-text="Yes, approve draft">
                                                     @csrf
                                                     <div class="modal-header">
                                                         <div class="draft-section-heading mb-0">
@@ -1534,7 +1559,7 @@
                                     $activePostFilingStageMeta = data_get($application->workflow_meta, "post_filing_journey.stages.$postFilingActiveStageKey", []);
                                     $activePostFilingAdminNote = data_get($activePostFilingStageMeta, 'admin_note');
                                 @endphp
-                                <form action="{{ route('workflow.post-filing.documents', [$application->id, $postFilingActiveStageKey]) }}" method="POST" enctype="multipart/form-data" class="post-filing-upload-form" data-swal-confirm data-swal-title="Submit post-filing documents?" data-swal-text="These files will be sent to the admin team for this registry stage." data-swal-icon="question" data-swal-confirm-text="Yes, submit">
+                                <form action="{{ $clientActionUrl('workflow.post-filing.documents', [$application->id, $postFilingActiveStageKey]) }}" method="POST" enctype="multipart/form-data" class="post-filing-upload-form" data-swal-confirm data-swal-title="Submit post-filing documents?" data-swal-text="These files will be sent to the admin team for this registry stage." data-swal-icon="question" data-swal-confirm-text="Yes, submit">
                                     @csrf
                                     <div class="fw-semibold mb-2">{{ $activePostFilingStage['title'] ?? 'Post Filing' }} documents requested</div>
                                     @if (filled($activePostFilingAdminNote))
@@ -1759,7 +1784,7 @@
                                                         Sent {{ $document->created_at ? $formatDateTime($document->created_at) : '-' }}
                                                     </small>
                                                 </div>
-                                                <a href="{{ route('user.document.view', $document->id) }}" target="_blank">View</a>
+                                                <a href="{{ route($documentViewRoute, $document->id) }}" target="_blank">View</a>
                                             </div>
                                         @endforeach
                                     </div>
@@ -1819,8 +1844,8 @@
                                         <p>PDF Document</p>
                                         <div class="document-tile-actions">
                                             @if ($engagementLetter)
-                                                <a href="{{ route('user.document.view', $engagementLetter->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
-                                                <a href="{{ route('user.document.download', $engagementLetter->id) }}"><i class="bi bi-download"></i> Download</a>
+                                                <a href="{{ route($documentViewRoute, $engagementLetter->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
+                                                <a href="{{ route($documentDownloadRoute, $engagementLetter->id) }}"><i class="bi bi-download"></i> Download</a>
                                             @else
                                                 <span>Awaiting issue</span>
                                             @endif
@@ -1834,8 +1859,8 @@
                                         <p>PDF Document</p>
                                         <div class="document-tile-actions">
                                             @if ($poaDocument)
-                                                <a href="{{ route('user.document.view', $poaDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
-                                                <a href="{{ route('user.document.download', $poaDocument->id) }}"><i class="bi bi-download"></i> Download</a>
+                                                <a href="{{ route($documentViewRoute, $poaDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
+                                                <a href="{{ route($documentDownloadRoute, $poaDocument->id) }}"><i class="bi bi-download"></i> Download</a>
                                             @else
                                                 <span>Awaiting issue</span>
                                             @endif
@@ -1849,8 +1874,8 @@
                                         <p>PDF Document</p>
                                         <div class="document-tile-actions">
                                             @if ($affidavitDocument)
-                                                <a href="{{ route('user.document.view', $affidavitDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
-                                                <a href="{{ route('user.document.download', $affidavitDocument->id) }}"><i class="bi bi-download"></i> Download</a>
+                                                <a href="{{ route($documentViewRoute, $affidavitDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
+                                                <a href="{{ route($documentDownloadRoute, $affidavitDocument->id) }}"><i class="bi bi-download"></i> Download</a>
                                             @else
                                                 <span>Awaiting issue</span>
                                             @endif
@@ -1864,8 +1889,8 @@
                                             <h6>{{ $otherOnboardingDocuments->count() > 1 ? 'Other Document ' . $loop->iteration : 'Other Document' }}</h6>
                                             <p>{{ $otherOnboardingDocument->file_name ?: strtoupper($otherOnboardingDocument->file_type ?: 'Document') }}</p>
                                             <div class="document-tile-actions">
-                                                <a href="{{ route('user.document.view', $otherOnboardingDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
-                                                <a href="{{ route('user.document.download', $otherOnboardingDocument->id) }}"><i class="bi bi-download"></i> Download</a>
+                                                <a href="{{ route($documentViewRoute, $otherOnboardingDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
+                                                <a href="{{ route($documentDownloadRoute, $otherOnboardingDocument->id) }}"><i class="bi bi-download"></i> Download</a>
                                             </div>
                                         </div>
                                     </div>
@@ -1891,8 +1916,8 @@
                                                 <h6>{{ $documentLabel($signedDocument->document_type) }}</h6>
                                                 <p>Verified Signed Document</p>
                                                 <div class="document-tile-actions">
-                                                    <a href="{{ route('user.document.view', $signedDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
-                                                    <a href="{{ route('user.document.download', $signedDocument->id) }}"><i class="bi bi-download"></i> Download</a>
+                                                    <a href="{{ route($documentViewRoute, $signedDocument->id) }}" target="_blank"><i class="bi bi-eye"></i> View</a>
+                                                    <a href="{{ route($documentDownloadRoute, $signedDocument->id) }}"><i class="bi bi-download"></i> Download</a>
                                                 </div>
                                             </div>
                                         </div>
@@ -1936,7 +1961,7 @@
                             <div class="stage-summary-grid mb-3">
                                 <div><span>Applicant</span><strong>{{ $application->applicant_name ?? 'N/A' }}</strong><em class="summary-mini-badge">Client</em></div>
                                 <div><span>Trademark</span><strong>{{ $application->brand_name ?? 'N/A' }}</strong><em class="summary-mini-badge summary-mini-badge-teal">Mark</em></div>
-                                <div><span>Email</span><strong>{{ $application->email ?? auth()->user()->email }}</strong></div>
+                                <div><span>Email</span><strong>{{ $application->email ?? $client->email }}</strong></div>
                                 <div><span>Phone</span><strong>{{ $application->phone ?? 'N/A' }}</strong></div>
                                 <div><span>Entity</span><strong>{{ $application->entity_type === 'individual' ? 'Individual / Proprietor / Trader' : ucfirst($application->entity_type ?? 'N/A') }}</strong><em class="summary-mini-badge summary-mini-badge-indigo">Type</em></div>
                                 <div><span>Submitted</span><strong>{{ $formatDateTime($application->created_at, 'd M Y') }}</strong></div>
@@ -1963,9 +1988,9 @@
                                                             <div class="stage-field">
                                                                 <span>{{ ucwords(str_replace('_', ' ', $field)) }}</span>
                                                                 @if ($field === 'image_of_trademark' && $value)
-                                                                    <a href="{{ route('trademark.image.view', ['id' => $application->id, 'file' => base64_encode((string) $value)]) }}" target="_blank">View Trademark Image</a>
+                                                                    <a href="{{ route($trademarkImageViewRoute, ['id' => $application->id, 'file' => base64_encode((string) $value)]) }}" target="_blank">View Trademark Image</a>
                                                                 @elseif ($field === 'proof_of_use_of_trademark' && $value)
-                                                                    <a href="{{ route('trademark.proof-of-use.view', ['id' => $application->id, 'file' => base64_encode((string) $value)]) }}" target="_blank">View Proof of Use</a>
+                                                                    <a href="{{ route($trademarkProofOfUseViewRoute, ['id' => $application->id, 'file' => base64_encode((string) $value)]) }}" target="_blank">View Proof of Use</a>
                                                                 @else
                                                                     <strong>{{ $formatSubmittedValue($value) }}</strong>
                                                                 @endif
@@ -2002,8 +2027,8 @@
                                     </div>
                                     <span class="stage-pill stage-pill-{{ $displayDocumentStatusClass }}">{{ $displayDocumentStatus }}</span>
                                     <div class="stage-document-actions">
-                                        <a href="{{ route('user.document.view', $doc->id) }}" target="_blank">View</a>
-                                        <a href="{{ route('user.document.download', $doc->id) }}">Download</a>
+                                        <a href="{{ route($documentViewRoute, $doc->id) }}" target="_blank">View</a>
+                                        <a href="{{ route($documentDownloadRoute, $doc->id) }}">Download</a>
                                     </div>
                                 </div>
                             @empty
@@ -2018,6 +2043,57 @@
             </div>
         </div>
     </div>
+
+    @if ($isAdminPreview)
+        <style>
+            .admin-client-preview-disabled {
+                cursor: not-allowed !important;
+                filter: grayscale(.45);
+                opacity: .58;
+            }
+
+            .admin-client-preview .status-page input:disabled,
+            .admin-client-preview .status-page textarea:disabled,
+            .admin-client-preview .status-page select:disabled,
+            .admin-client-preview .status-page button:disabled {
+                cursor: not-allowed;
+            }
+        </style>
+        <script>
+            (() => {
+                const root = document.querySelector('.status-page');
+                if (!root) return;
+
+                root.querySelectorAll('form').forEach((form) => {
+                    form.addEventListener('submit', (event) => event.preventDefault(), true);
+                    form.querySelectorAll('input, textarea, select, button').forEach((control) => {
+                        control.disabled = true;
+                        control.setAttribute('aria-disabled', 'true');
+                    });
+                });
+
+                root.querySelectorAll('button').forEach((button) => {
+                    button.disabled = true;
+                    button.setAttribute('aria-disabled', 'true');
+                });
+
+                root.querySelectorAll('a').forEach((link) => {
+                    const target = new URL(link.href, window.location.origin);
+                    const isSafePreviewLink = link.hasAttribute('data-admin-preview-link')
+                        || target.pathname.startsWith('/admin/documents/')
+                        || target.pathname.startsWith('/admin/trademark/')
+                        || (target.pathname === window.location.pathname && target.hash);
+
+                    if (isSafePreviewLink) return;
+
+                    link.classList.add('admin-client-preview-disabled');
+                    link.setAttribute('aria-disabled', 'true');
+                    link.removeAttribute('target');
+                    link.addEventListener('click', (event) => event.preventDefault());
+                });
+            })();
+        </script>
+    @endif
 
     <script>
         function toggleApprovalSignatureMode(mode) {
@@ -2724,7 +2800,7 @@
                         return;
                     }
                     imageDataInput.value = signatureCanvasData();
-                    signatureInput.value = typeInput.value.trim() || signatureInput.value || '{{ auth()->user()->name }}';
+                    signatureInput.value = typeInput.value.trim() || signatureInput.value || @json($client->name);
                 }
 
                 if (activeMode === 'type') {
@@ -2745,7 +2821,7 @@
                         alert(`Please crop your signature image to ${expectedUploadWidth} x ${expectedUploadHeight}px before applying it.`);
                         return;
                     }
-                    signatureInput.value = typeInput.value.trim() || signatureInput.value || '{{ auth()->user()->name }}';
+                    signatureInput.value = typeInput.value.trim() || signatureInput.value || @json($client->name);
                 }
 
                 modeInput.value = activeMode;

@@ -134,6 +134,69 @@ class AdminController extends Controller
     }
 
     /**
+     * Show the selected application's owner dashboard without impersonating the client.
+     */
+    public function viewClientDashboard($applicationId)
+    {
+        $application = Application::with('user')->findOrFail($applicationId);
+        $client = $application->user;
+        $applications = $client->applications()->with('payments')->latest()->get();
+        $stuckTrademarkCases = $client->stuckTrademarkCases()->latest()->get();
+        $trademarkOppositionCases = $client->trademarkOppositionCases()
+            ->where('flow_type', TrademarkOppositionWorkflow::FLOW_DEFEND)
+            ->with('documents')
+            ->latest()
+            ->get();
+        $trademarkOpposeCases = $client->trademarkOppositionCases()
+            ->where('flow_type', TrademarkOppositionWorkflow::FLOW_OPPOSE)
+            ->with('evidence')
+            ->latest()
+            ->get();
+        $examinationReplyCases = $client->examinationReportReplyCases()->latest()->get();
+        $pendingPayments = $applications->filter(fn ($clientApplication) => in_array($clientApplication->current_status, [
+            TrademarkWorkflow::DRAFT,
+            TrademarkWorkflow::PAYMENT_PENDING_FINAL,
+        ], true))->count();
+        $underReview = $applications->where('current_status', TrademarkWorkflow::UNDER_REVIEW)->count();
+        $registered = $applications->filter(function ($clientApplication) {
+            if (Schema::hasColumn('applications', 'registry_status')) {
+                return $clientApplication->registry_status === TrademarkWorkflow::REGISTRY_REGISTERED;
+            }
+
+            return filled($clientApplication->registered_at);
+        })->count();
+
+        return view('dashboard.index', [
+            'applications' => $applications,
+            'pendingPayments' => $pendingPayments,
+            'underReview' => $underReview,
+            'registered' => $registered,
+            'stuckTrademarkCases' => $stuckTrademarkCases,
+            'trademarkOppositionCases' => $trademarkOppositionCases,
+            'trademarkOpposeCases' => $trademarkOpposeCases,
+            'examinationReplyCases' => $examinationReplyCases,
+            'adminPreview' => true,
+            'client' => $client,
+            'previewApplication' => $application,
+        ]);
+    }
+
+    /**
+     * Show the exact client action center in a guarded, read-only admin preview.
+     */
+    public function viewClientActionCenter($applicationId)
+    {
+        $application = Application::with($this->applicationRelations())->findOrFail($applicationId);
+        $application = $this->normalizeApplicationRelations($application);
+
+        return view('trademark.status', [
+            'application' => $application,
+            'adminPreview' => true,
+            'client' => $application->user,
+        ]);
+    }
+
+    /**
      * Approve application
      */
     public function approveApplication(Request $request, $applicationId, TrademarkWorkflowService $workflow)
