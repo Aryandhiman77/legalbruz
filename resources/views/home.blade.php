@@ -1165,8 +1165,8 @@
                                 <i class="bi bi-arrow-right" style="margin-right: 8px;"></i>Get Started Free
                             </a>
                         @endauth
-                        <a href="{{ route('flow-guide') }}" class="btn-hero btn-hero-secondary">
-                            <i class="bi bi-play-circle" style="margin-right: 8px;"></i>See How It Works
+                        <a href="https://legalbruz.co.uk" class="btn-hero btn-hero-secondary" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-box-arrow-up-right" style="margin-right: 8px;"></i>Visit LegalBruz UK
                         </a>
                     </div>
 
@@ -2146,7 +2146,11 @@
                                 <div class="stars" aria-label="{{ $review->rating }} out of 5 stars">
                                     <span aria-hidden="true">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
                                 </div>
-                                <p class="testimonial-text">“{{ $review->review }}”</p>
+                                <p class="testimonial-text" id="review-text-{{ $review->id }}" data-review-text>“{{ $review->review }}”</p>
+                                <button type="button" class="testimonial-read-more" data-review-toggle
+                                    aria-controls="review-text-{{ $review->id }}" aria-expanded="false" hidden>
+                                    Read more
+                                </button>
                                 <div class="testimonial-author">
                                     <div class="author-avatar {{ $review->logo_path ? 'has-image' : '' }}" aria-hidden="true">
                                         @if ($review->logo_path)
@@ -3338,6 +3342,41 @@ ${warnings.length ? `<section class="card"><h2>Warnings</h2>${listRows(warnings,
             update();
             startAutoPlay();
         });
+
+        // Clamp long customer reviews to five lines and reveal a toggle only when needed.
+        const updateReviewToggles = () => {
+            document.querySelectorAll('[data-review-text]').forEach(reviewText => {
+                const toggle = reviewText.nextElementSibling;
+                if (!toggle?.matches('[data-review-toggle]')) return;
+
+                const wasExpanded = reviewText.classList.contains('is-expanded');
+                reviewText.classList.remove('is-expanded');
+                const isOverflowing = reviewText.scrollHeight > reviewText.clientHeight + 1;
+                reviewText.classList.toggle('is-expanded', wasExpanded && isOverflowing);
+                reviewText.classList.toggle('has-toggle', isOverflowing);
+                toggle.hidden = !isOverflowing;
+
+                if (!isOverflowing) {
+                    toggle.textContent = 'Read more';
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        };
+
+        document.querySelectorAll('[data-review-toggle]').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const reviewText = document.getElementById(toggle.getAttribute('aria-controls'));
+                if (!reviewText) return;
+
+                const isExpanded = reviewText.classList.toggle('is-expanded');
+                toggle.textContent = isExpanded ? 'Read less' : 'Read more';
+                toggle.setAttribute('aria-expanded', String(isExpanded));
+            });
+        });
+
+        updateReviewToggles();
+        window.addEventListener('load', updateReviewToggles);
+        window.addEventListener('resize', updateReviewToggles);
 
         // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

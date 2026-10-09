@@ -1219,6 +1219,44 @@ nav.navbar {
     line-height: 1.8;
     margin-bottom: 25px;
     font-style: italic;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    overflow: hidden;
+}
+
+.testimonial-text.has-toggle {
+    margin-bottom: 12px;
+}
+
+.testimonial-text.is-expanded {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+}
+
+.testimonial-read-more {
+    align-self: flex-start;
+    margin: 0 0 25px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--emerald);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.testimonial-read-more:hover,
+.testimonial-read-more:focus-visible {
+    color: var(--navy);
+    text-decoration: underline;
+}
+
+.testimonial-read-more[hidden] {
+    display: none;
 }
 
 .testimonial-author {

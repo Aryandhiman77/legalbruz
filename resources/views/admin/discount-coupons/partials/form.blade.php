@@ -242,7 +242,7 @@
                                         <input type="text" name="code" class="coupon-input coupon-code-input" id="couponCode"
                                             value="{{ old('code', $coupon->code) }}"
                                             placeholder="Enter coupon code (e.g. TM50)" required>
-                                        <div class="coupon-help">Customers will enter this code at checkout.</div>
+                                        <div class="coupon-help">Used to identify this offer in admin and payment records.</div>
                                     </div>
                                     <div class="mb-3">
                                         <label class="coupon-label">Coupon Title <span class="text-danger">*</span></label>
@@ -362,13 +362,6 @@
 
                                 <div class="coupon-section">
                                     <div class="coupon-section-title">Advanced Options</div>
-                                    <div class="form-check mb-3">
-                                        <input type="hidden" name="auto_apply" value="0">
-                                        <input class="form-check-input" type="checkbox" name="auto_apply" value="1"
-                                            id="autoApply" @checked(old('auto_apply', $coupon->auto_apply))>
-                                        <label class="form-check-label fw-bold" for="autoApply">Auto Apply</label>
-                                        <div class="coupon-help">Automatically apply this coupon when conditions are met.</div>
-                                    </div>
                                     <div class="form-check mb-3">
                                         <input type="hidden" name="show_on_website" value="0">
                                         <input class="form-check-input" type="checkbox" name="show_on_website" value="1"
