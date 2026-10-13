@@ -134,6 +134,45 @@ class AdminController extends Controller
     }
 
     /**
+     * Update the client-submitted summary shown in the admin matter overview.
+     */
+    public function updateMatterOverview(Request $request, $applicationId)
+    {
+        $application = Application::findOrFail($applicationId);
+
+        $validated = $request->validateWithBag('matterOverview', [
+            'mark_brand' => ['required', 'string', 'max:255'],
+            'applicant_name' => ['required', 'string', 'max:255'],
+            'type_of_applicant' => ['required', 'in:individual,company,llp,ngo,small_enterprise,startup,others'],
+            'applicant_email' => ['required', 'email', 'max:255'],
+            'applicant_phone' => ['required', 'string', 'size:10', 'regex:/^[6789]\d{9}$/'],
+            'goods_services' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $membersDetails = $application->members_details ?? [];
+        data_set($membersDetails, 'trademark_applicant_details.applicant_name', $validated['applicant_name']);
+        data_set($membersDetails, 'trademark_applicant_details.phone_mobile_number', $validated['applicant_phone']);
+        data_set($membersDetails, 'trademark_applicant_details.email_id', $validated['applicant_email']);
+        data_set($membersDetails, 'trademark_applicant_details.type_of_applicant', $validated['type_of_applicant']);
+        data_set($membersDetails, 'trademark_details.mark_brand_in_words', $validated['mark_brand']);
+        data_set($membersDetails, 'trademark_details.goods_or_services', $validated['goods_services']);
+
+        $application->update([
+            'brand_name' => $validated['mark_brand'],
+            'applicant_name' => $validated['applicant_name'],
+            'entity_type' => $validated['type_of_applicant'] === 'individual' ? 'individual' : 'company',
+            'email' => $validated['applicant_email'],
+            'phone' => $validated['applicant_phone'],
+            'goods_services' => $validated['goods_services'],
+            'members_details' => $membersDetails,
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Matter overview updated successfully.');
+    }
+
+    /**
      * Show the selected application's owner dashboard without impersonating the client.
      */
     public function viewClientDashboard($applicationId)

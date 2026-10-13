@@ -33,6 +33,23 @@
             ? \Illuminate\Support\Carbon::parse($timestamp)->timezone($displayTimezone)->format($format)
             : null;
         $details = $application->members_details ?? [];
+        $matterApplicant = $details['trademark_applicant_details'] ?? [];
+        $matterTrademark = $details['trademark_details'] ?? [];
+        $matterBrandName = $matterTrademark['mark_brand_in_words'] ?? $application->brand_name;
+        $matterApplicantName = $matterApplicant['applicant_name'] ?? $application->applicant_name;
+        $matterApplicantEmail = $matterApplicant['email_id'] ?? $application->email ?? $application->user->email;
+        $matterApplicantPhone = $matterApplicant['phone_mobile_number'] ?? $application->phone;
+        $matterApplicantType = $matterApplicant['type_of_applicant'] ?? $application->entity_type;
+        $matterGoodsServices = $matterTrademark['goods_or_services'] ?? $application->goods_services;
+        $applicantTypeOptions = [
+            'individual' => 'Individual / Proprietor / Trader',
+            'company' => 'Company',
+            'llp' => 'LLP',
+            'ngo' => 'NGO',
+            'small_enterprise' => 'Small Enterprise',
+            'startup' => 'Startup',
+            'others' => 'Others',
+        ];
         $sections = [
             'Billing Details' => $details['billing_company_details'] ?? [],
             'Trademark Applicant Details' => $details['trademark_applicant_details'] ?? [],
@@ -182,25 +199,102 @@
 
         <div class="row g-4">
             <div class="col-lg-8">
-                <div class="card shadow-sm border-0 mb-4" id="submitted-data">
-                    <div class="card-header admin-card-header">
-                        <h5 class="mb-0">Matter Overview</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Trademark</span><div class="data-value">{{ $application->brand_name ?? 'N/A' }}</div></div></div>
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Applicant</span><div class="data-value">{{ $application->applicant_name ?? 'N/A' }}</div></div></div>
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Entity Type</span><div class="data-value">{{ $application->entity_type === 'individual' ? 'Individual / Proprietor / Trader' : ucfirst($application->entity_type ?? 'N/A') }}</div></div></div>
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Email</span><div class="data-value">{{ $application->email ?? $application->user->email }}</div></div></div>
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Phone</span><div class="data-value">{{ $application->phone ?? 'N/A' }}</div></div></div>
-                            <div class="col-md-6"><div class="data-block"><span class="data-label">Submitted</span><div class="data-value">{{ $formatDateTime($application->created_at, 'M d, Y h:i A') }}</div></div></div>
-                            <div class="col-12"><div class="data-block"><span class="data-label">Goods / Services</span><div class="data-value">{{ $application->goods_services ?? 'N/A' }}</div></div></div>
-                            @if ($application->classes)
-                                <div class="col-12"><div class="data-block"><span class="data-label">Recommended Classes</span><div class="data-value">{{ implode(', ', is_array($application->classes) ? $application->classes : json_decode($application->classes, true) ?? []) }}</div></div></div>
-                            @endif
+                @php
+                    $matterOverviewHasErrors = $errors->matterOverview->any();
+                @endphp
+                <form
+                    method="POST"
+                    action="{{ route('admin.application.matter-overview.update', $application->id) }}"
+                    class="card shadow-sm border-0 mb-4 matter-overview-card"
+                    id="submitted-data"
+                    data-matter-overview
+                    data-start-editing="{{ $matterOverviewHasErrors ? 'true' : 'false' }}"
+                >
+                    @csrf
+                    @method('PATCH')
+                    <div class="card-header admin-card-header matter-overview-header">
+                        <div>
+                            <h5 class="mb-1">Matter Overview</h5>
+                            <p class="mb-0 matter-overview-subtitle">Edit the client-submitted matter details below.</p>
+                        </div>
+                        <div class="matter-overview-actions" data-matter-view-actions>
+                            <button type="button" class="btn matter-overview-primary-action" data-matter-edit>
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                                Edit
+                            </button>
+                        </div>
+                        <div class="matter-overview-actions" data-matter-edit-actions hidden>
+                            <button type="submit" class="btn matter-overview-primary-action">
+                                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                                Save Changes
+                            </button>
+                            <button type="button" class="btn matter-overview-cancel-action" data-matter-cancel>
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                                Cancel
+                            </button>
                         </div>
                     </div>
-                </div>
+                    <div class="card-body">
+                        <div data-matter-view>
+                            <div class="row g-3">
+                                <div class="col-md-6"><div class="data-block"><span class="data-label">Trademark</span><div class="data-value">{{ $matterBrandName ?: 'N/A' }}</div></div></div>
+                                <div class="col-md-6"><div class="data-block"><span class="data-label">Applicant</span><div class="data-value">{{ $matterApplicantName ?: 'N/A' }}</div></div></div>
+                                <div class="col-md-6"><div class="data-block"><span class="data-label">Type of Applicant</span><div class="data-value">{{ $applicantTypeOptions[$matterApplicantType] ?? 'N/A' }}</div></div></div>
+                                <div class="col-md-6"><div class="data-block"><span class="data-label">Email</span><div class="data-value">{{ $matterApplicantEmail ?: 'N/A' }}</div></div></div>
+                                <div class="col-md-6"><div class="data-block"><span class="data-label">Phone</span><div class="data-value">{{ $matterApplicantPhone ?: 'N/A' }}</div></div></div>
+                                <div class="col-md-6"><div class="data-block"><span class="data-label">Submitted</span><div class="data-value">{{ $formatDateTime($application->created_at, 'M d, Y h:i A') }}</div></div></div>
+                                <div class="col-12"><div class="data-block"><span class="data-label">Goods / Services</span><div class="data-value">{{ $matterGoodsServices ?: 'N/A' }}</div></div></div>
+                            </div>
+                        </div>
+
+                        <div data-matter-edit-view hidden>
+                            @if ($matterOverviewHasErrors)
+                                <div class="alert alert-danger mb-3">Please fix the highlighted matter overview fields.</div>
+                            @endif
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="matter-brand-name" class="form-label data-label">Trademark</label>
+                                    <input id="matter-brand-name" type="text" name="mark_brand" value="{{ old('mark_brand', $matterBrandName) }}" class="form-control @error('mark_brand', 'matterOverview') is-invalid @enderror" maxlength="255" required>
+                                    @error('mark_brand', 'matterOverview')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="matter-applicant-name" class="form-label data-label">Applicant</label>
+                                    <input id="matter-applicant-name" type="text" name="applicant_name" value="{{ old('applicant_name', $matterApplicantName) }}" class="form-control @error('applicant_name', 'matterOverview') is-invalid @enderror" maxlength="255" required>
+                                    @error('applicant_name', 'matterOverview')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="matter-applicant-type" class="form-label data-label">Type of Applicant</label>
+                                    <select id="matter-applicant-type" name="type_of_applicant" class="form-select @error('type_of_applicant', 'matterOverview') is-invalid @enderror" required>
+                                        <option value="">Select applicant type</option>
+                                        @foreach ($applicantTypeOptions as $value => $label)
+                                            <option value="{{ $value }}" @selected(old('type_of_applicant', $matterApplicantType) === $value)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('type_of_applicant', 'matterOverview')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="matter-email" class="form-label data-label">Email</label>
+                                    <input id="matter-email" type="email" name="applicant_email" value="{{ old('applicant_email', $matterApplicantEmail) }}" class="form-control @error('applicant_email', 'matterOverview') is-invalid @enderror" maxlength="255" required>
+                                    @error('applicant_email', 'matterOverview')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="matter-phone" class="form-label data-label">Phone</label>
+                                    <input id="matter-phone" type="text" name="applicant_phone" value="{{ old('applicant_phone', $matterApplicantPhone) }}" class="form-control @error('applicant_phone', 'matterOverview') is-invalid @enderror" inputmode="numeric" maxlength="10" pattern="[6789][0-9]{9}" title="Enter a 10-digit Indian mobile number" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)" required>
+                                    @error('applicant_phone', 'matterOverview')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <span class="data-label">Submitted</span>
+                                    <div class="matter-overview-readonly">{{ $formatDateTime($application->created_at, 'M d, Y h:i A') }}</div>
+                                </div>
+                                <div class="col-12">
+                                    <label for="matter-goods-services" class="form-label data-label">Goods / Services</label>
+                                    <textarea id="matter-goods-services" name="goods_services" rows="3" class="form-control @error('goods_services', 'matterOverview') is-invalid @enderror" maxlength="2000" required>{{ old('goods_services', $matterGoodsServices) }}</textarea>
+                                    @error('goods_services', 'matterOverview')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
 
                 @if ($oppositionApplication || $oppositionDefenceCase)
                     <div class="card shadow-sm border-0 mb-4">
@@ -807,6 +901,95 @@
             color: #fff !important;
         }
 
+        .matter-overview-header {
+            min-height: 118px;
+            padding: 1.5rem 2rem;
+            background: #223f64;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+
+        .matter-overview-subtitle {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .matter-overview-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .matter-overview-actions[hidden],
+        [data-matter-view][hidden],
+        [data-matter-edit-view][hidden] {
+            display: none !important;
+        }
+
+        .matter-overview-primary-action,
+        .matter-overview-cancel-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            min-height: 46px;
+            padding: 0.65rem 1.2rem;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .matter-overview-primary-action {
+            color: #fff;
+            background: #19a495;
+            border-color: #19a495;
+        }
+
+        .matter-overview-primary-action:hover,
+        .matter-overview-primary-action:focus {
+            color: #fff;
+            background: #148b7f;
+            border-color: #148b7f;
+        }
+
+        .matter-overview-cancel-action {
+            color: #fff;
+            background: transparent;
+            border-color: transparent;
+        }
+
+        .matter-overview-cancel-action:hover,
+        .matter-overview-cancel-action:focus {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .matter-overview-readonly {
+            min-height: 38px;
+            padding: 0.55rem 0.75rem;
+            color: #53657a;
+            background: #edf1f5;
+            border: 1px solid #d9e0e8;
+            border-radius: 0.375rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .matter-overview-header {
+                padding: 1.25rem;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .matter-overview-actions {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+
         .data-block {
             background: #f8fafc;
             border: 1px solid #e9eef5;
@@ -917,6 +1100,38 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const matterOverview = document.querySelector('[data-matter-overview]');
+
+            if (matterOverview) {
+                const view = matterOverview.querySelector('[data-matter-view]');
+                const editView = matterOverview.querySelector('[data-matter-edit-view]');
+                const viewActions = matterOverview.querySelector('[data-matter-view-actions]');
+                const editActions = matterOverview.querySelector('[data-matter-edit-actions]');
+                const editButton = matterOverview.querySelector('[data-matter-edit]');
+                const cancelButton = matterOverview.querySelector('[data-matter-cancel]');
+                const firstInput = editView?.querySelector('input, select, textarea');
+                const setMatterEditing = (editing, focusFirstInput = false) => {
+                    view.hidden = editing;
+                    editView.hidden = !editing;
+                    viewActions.hidden = editing;
+                    editActions.hidden = !editing;
+
+                    if (editing && focusFirstInput) {
+                        firstInput?.focus();
+                    } else if (!editing && focusFirstInput) {
+                        editButton?.focus();
+                    }
+                };
+
+                editButton?.addEventListener('click', () => setMatterEditing(true, true));
+                cancelButton?.addEventListener('click', () => {
+                    matterOverview.reset();
+                    setMatterEditing(false, true);
+                });
+
+                setMatterEditing(matterOverview.dataset.startEditing === 'true');
+            }
+
             const filingDocCard = document.querySelector('[data-filing-documents-card]');
             const filingDocForm = document.querySelector('[data-filing-doc-review-form]');
             const filingDocSelectToggle = document.querySelector('[data-filing-doc-select-toggle]');
