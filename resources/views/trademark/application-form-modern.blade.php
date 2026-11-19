@@ -767,13 +767,153 @@
             const proofOfUseInput = document.getElementById('proof_of_use');
             const applicantTypeSelect = document.getElementById('type_of_applicant');
             const signatoryOwnerNote = document.querySelector('[data-signatory-owner-note]');
+            const draftStorageKey = @json('legalbruz.trademark-application-draft.v1.user.' . auth()->id());
+            const hasValidationErrors = @json($errors->any());
+            const draftFieldNames = [
+                'applicant_name',
+                'applicant_email',
+                'applicant_address',
+                'applicant_pincode',
+                'applicant_state',
+                'applicant_district',
+                'applicant_phone',
+                'type_of_applicant',
+                'signatory_name',
+                'signatory_father_name',
+                'signatory_address',
+                'signatory_pincode',
+                'signatory_state',
+                'signatory_district',
+                'signatory_phone',
+                'signatory_email',
+                'signatory_designation',
+                'co_applicant_name',
+                'co_applicant_father_name',
+                'co_applicant_address',
+                'co_applicant_pincode',
+                'co_applicant_state',
+                'co_applicant_district',
+                'co_applicant_mobile',
+                'co_applicant_email',
+                'co_applicant_designation',
+                'trademark_type',
+                'mark_brand',
+                'trademark_language',
+                'trademark_origin_description',
+                'mark_conditions',
+                'goods_services',
+                'trade_description',
+                'trademark_usage_status',
+                'trademark_use_date',
+                'application_type',
+                'billing_name',
+                'billing_email',
+                'billing_address',
+                'billing_mobile',
+                'gst_number',
+            ];
             let currentStep = 1;
+            let draftSaveTimer = null;
+            let formSubmitted = false;
             const MB = 1024 * 1024;
             const fileRules = [
                 { input: trademarkImageInput, maxBytes: 4 * MB, label: 'Trademark image' },
                 { input: proofOfUseInput, maxBytes: 5 * MB, label: 'Proof of use' },
             ];
             const pincodeLookups = ['applicant', 'signatory', 'co_applicant'];
+
+            function getDraftField(fieldName) {
+                return form.elements.namedItem(fieldName);
+            }
+
+            function collectDraftFields() {
+                return draftFieldNames.reduce((fields, fieldName) => {
+                    const field = getDraftField(fieldName);
+
+                    if (field) {
+                        fields[fieldName] = field.value;
+                    }
+
+                    return fields;
+                }, {});
+            }
+
+            function saveDraft() {
+                window.clearTimeout(draftSaveTimer);
+
+                try {
+                    localStorage.setItem(draftStorageKey, JSON.stringify({
+                        version: 1,
+                        currentStep,
+                        fields: collectDraftFields(),
+                        updatedAt: new Date().toISOString(),
+                    }));
+                } catch (error) {
+                    // The form must remain usable when storage is blocked or full.
+                }
+            }
+
+            function queueDraftSave() {
+                window.clearTimeout(draftSaveTimer);
+                draftSaveTimer = window.setTimeout(saveDraft, 250);
+            }
+
+            function setDraftFieldValue(fieldName, value) {
+                const field = getDraftField(fieldName);
+
+                if (!field || typeof value !== 'string') {
+                    return;
+                }
+
+                if (field instanceof HTMLSelectElement &&
+                    value &&
+                    !Array.from(field.options).some((option) => option.value === value)) {
+                    field.append(new Option(value, value));
+                }
+
+                field.value = value;
+
+                if (field.matches('[data-selected]')) {
+                    field.dataset.selected = value;
+                }
+            }
+
+            function applyDraft(draft) {
+                if (!draft || draft.version !== 1 || !draft.fields || typeof draft.fields !== 'object') {
+                    return 1;
+                }
+
+                draftFieldNames.forEach((fieldName) => {
+                    if (Object.prototype.hasOwnProperty.call(draft.fields, fieldName)) {
+                        setDraftFieldValue(fieldName, draft.fields[fieldName]);
+                    }
+                });
+
+                const savedStep = Number(draft.currentStep);
+                return savedStep >= 1 && savedStep <= steps.length ? savedStep : 1;
+            }
+
+            function restoreDraft() {
+                if (hasValidationErrors) {
+                    return 1;
+                }
+
+                try {
+                    return applyDraft(JSON.parse(localStorage.getItem(draftStorageKey) || 'null'));
+                } catch (error) {
+                    return 1;
+                }
+            }
+
+            function clearDraft() {
+                window.clearTimeout(draftSaveTimer);
+
+                try {
+                    localStorage.removeItem(draftStorageKey);
+                } catch (error) {
+                    // A successful form submission should not be blocked by storage.
+                }
+            }
 
             function uniqueValues(values) {
                 return Array.from(new Set(values.filter(Boolean))).sort();
@@ -844,6 +984,7 @@
                         setSelectOptions(districtSelect, districts, districtSelect.dataset.selected, 'Select district');
                         stateSelect.dataset.selected = stateSelect.value;
                         districtSelect.dataset.selected = districtSelect.value;
+                        queueDraftSave();
                     } catch (error) {
                         resetLocationFields(stateSelect, districtSelect, 'Unable to fetch location');
                     }
@@ -870,12 +1011,15 @@
                 });
             }
 
-            function showStep(step) {
+            function showStep(step, shouldSave = true) {
                 currentStep = step;
                 steps.forEach((section) => {
                     section.classList.toggle('active', Number(section.dataset.step) === step);
                 });
                 updateStepper(step);
+                if (shouldSave) {
+                    queueDraftSave();
+                }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
@@ -930,8 +1074,15 @@
             form.addEventListener('submit', function(event) {
                 if (!validateCurrentStep() || !validateFileSizes()) {
                     event.preventDefault();
+                    return;
                 }
+
+                formSubmitted = true;
+                clearDraft();
             });
+
+            form.addEventListener('input', queueDraftSave);
+            form.addEventListener('change', queueDraftSave);
 
             function updateSignatoryOwnerNote() {
                 if (!applicantTypeSelect || !signatoryOwnerNote) {
@@ -942,10 +1093,31 @@
             }
 
             applicantTypeSelect?.addEventListener('change', updateSignatoryOwnerNote);
-            updateSignatoryOwnerNote();
 
+            window.addEventListener('storage', function(event) {
+                if (event.key !== draftStorageKey || !event.newValue) {
+                    return;
+                }
+
+                try {
+                    const savedStep = applyDraft(JSON.parse(event.newValue));
+                    updateSignatoryOwnerNote();
+                    showStep(savedStep, false);
+                } catch (error) {
+                    // Ignore malformed draft data written by another tab.
+                }
+            });
+
+            window.addEventListener('beforeunload', function() {
+                if (!formSubmitted) {
+                    saveDraft();
+                }
+            });
+
+            const restoredStep = restoreDraft();
+            updateSignatoryOwnerNote();
             pincodeLookups.forEach(setupPincodeLookup);
-            showStep(1);
+            showStep(restoredStep);
         });
     </script>
 @endsection
